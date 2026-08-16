@@ -50,7 +50,14 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Whether the navigation link wrapping $label carries the active-state class
+ * from resources/views/components/nav-link.blade.php (F04).
+ */
+function navLinkIsActive(string $html, string $label): bool
 {
-    // ..
+    return (bool) preg_match(
+        '/<a[^>]*class="[^"]*border-indigo-400[^"]*"[^>]*>\s*'.preg_quote($label, '/').'\s*<\/a>/s',
+        $html
+    );
 }
