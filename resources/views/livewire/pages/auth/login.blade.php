@@ -33,7 +33,18 @@ new #[Layout('layouts.guest')] class extends Component
         <div>
             <x-input-label for="email" :value="__('Email')" />
             <x-text-input wire:model="form.email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('form.email')" class="mt-2" />
+
+            @if ($form->throttleSecondsRemaining > 0)
+                <p
+                    x-data="{ seconds: @js($form->throttleSecondsRemaining) }"
+                    x-init="const id = setInterval(() => { seconds = Math.max(0, seconds - 1); if (seconds === 0) clearInterval(id) }, 1000)"
+                    class="mt-2 text-sm text-red-600"
+                >
+                    Muitas tentativas. Tente novamente em <span x-text="seconds"></span> segundos.
+                </p>
+            @else
+                <x-input-error :messages="$errors->get('form.email')" class="mt-2" />
+            @endif
         </div>
 
         <!-- Password -->
@@ -57,12 +68,6 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
 
         <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}" wire:navigate>
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
             <x-primary-button class="ms-3">
                 {{ __('Log in') }}
             </x-primary-button>
