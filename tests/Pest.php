@@ -18,6 +18,12 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
+// No RefreshDatabase: this suite (App\Services\PokeApi and friends) never
+// touches the database, but still needs the full container for Http::fake(),
+// Cache::, RateLimiter::, and Log::.
+pest()->extend(TestCase::class)
+    ->in('Unit');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations
