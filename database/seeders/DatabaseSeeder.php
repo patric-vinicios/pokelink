@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Jobs\SyncPokemonCatalog;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -20,8 +21,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(UserSeeder::class);
 
-        // F06 extension point: dispatch the Pokémon catalog sync job onto the
-        // `default` queue here. The Horizon worker picks it up while the
-        // application is already answering on http://localhost:8000.
+        // Enqueues only — the Horizon worker picks it up while the application
+        // is already answering on http://localhost:8000.
+        SyncPokemonCatalog::dispatch();
     }
 }
