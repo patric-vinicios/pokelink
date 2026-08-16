@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 
 const DOCUMENTED_ACCOUNTS = [
     'admin@pokelink.test' => 'password',
@@ -67,8 +68,14 @@ test('ambas as contas conseguem autenticar com as credenciais do README', functi
 test('o DatabaseSeeder executa sem depender de rede', function () {
     // Seeding runs inside the container entrypoint, before the application
     // serves its first request — a stray HTTP call there would put the whole
-    // boot at the mercy of a third party.
+    // boot at the mercy of a third party. The seeder only enqueues F06's
+    // catalog sync (SyncPokemonCatalog::dispatch()); the queue worker, not
+    // the seeder process, is what actually talks to PokeAPI. Faking the
+    // queue here isolates that boundary — without it, the test suite's
+    // QUEUE_CONNECTION=sync would run the job inline and defeat the point
+    // of this assertion.
     Http::preventStrayRequests();
+    Queue::fake();
 
     $this->artisan('db:seed', ['--force' => true])->assertSuccessful();
 
