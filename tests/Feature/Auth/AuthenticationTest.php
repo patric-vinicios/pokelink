@@ -80,13 +80,15 @@ test('um convidado que acessa uma rota protegida é redirecionado para o login c
     $response->assertSessionHas('status', 'Faça login para continuar.');
 })->with([
     '/',
-    '/profile',
+    '/perfil',
+    '/favoritos',
+    '/chat',
 ]);
 
 test('o login bem-sucedido restaura a url originalmente pretendida', function () {
     $user = User::factory()->create();
 
-    $this->get('/profile')->assertRedirect(route('login'));
+    $this->get('/perfil')->assertRedirect(route('login'));
 
     $component = Volt::test('pages.auth.login')
         ->set('form.email', $user->email)
@@ -94,7 +96,7 @@ test('o login bem-sucedido restaura a url originalmente pretendida', function ()
 
     $component->call('login');
 
-    $component->assertRedirect('/profile');
+    $component->assertRedirect('/perfil');
 
     $this->assertAuthenticated();
 });
