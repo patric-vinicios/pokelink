@@ -14,6 +14,15 @@ new class extends Component
 
         $this->redirect('/', navigate: true);
     }
+
+    /**
+     * Início also covers Pokémon detail routes (F09), which don't exist yet —
+     * routeIs() against an unregistered pattern simply returns false until then.
+     */
+    public function inicioIsActive(): bool
+    {
+        return request()->routeIs('dashboard') || request()->routeIs('pokemon.*');
+    }
 }; ?>
 
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
@@ -30,8 +39,17 @@ new class extends Component
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
+                    <x-nav-link :href="route('dashboard')" :active="$this->inicioIsActive()" wire:navigate>
+                        Início
+                    </x-nav-link>
+                    <x-nav-link :href="route('favoritos')" :active="request()->routeIs('favoritos')" wire:navigate>
+                        Favoritos
+                    </x-nav-link>
+                    <x-nav-link :href="route('chat')" :active="request()->routeIs('chat')" wire:navigate>
+                        Chat
+                    </x-nav-link>
+                    <x-nav-link :href="route('perfil')" :active="request()->routeIs('perfil')" wire:navigate>
+                        Meu Perfil
                     </x-nav-link>
                 </div>
             </div>
@@ -52,14 +70,10 @@ new class extends Component
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile')" wire:navigate>
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
-
                         <!-- Authentication -->
                         <button wire:click="logout" class="w-full text-start">
                             <x-dropdown-link>
-                                {{ __('Log Out') }}
+                                Sair
                             </x-dropdown-link>
                         </button>
                     </x-slot>
@@ -81,8 +95,17 @@ new class extends Component
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                {{ __('Dashboard') }}
+            <x-responsive-nav-link :href="route('dashboard')" :active="$this->inicioIsActive()" wire:navigate>
+                Início
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('favoritos')" :active="request()->routeIs('favoritos')" wire:navigate>
+                Favoritos
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('chat')" :active="request()->routeIs('chat')" wire:navigate>
+                Chat
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('perfil')" :active="request()->routeIs('perfil')" wire:navigate>
+                Meu Perfil
             </x-responsive-nav-link>
         </div>
 
@@ -94,14 +117,10 @@ new class extends Component
             </div>
 
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile')" wire:navigate>
-                    {{ __('Profile') }}
-                </x-responsive-nav-link>
-
                 <!-- Authentication -->
                 <button wire:click="logout" class="w-full text-start">
                     <x-responsive-nav-link>
-                        {{ __('Log Out') }}
+                        Sair
                     </x-responsive-nav-link>
                 </button>
             </div>
