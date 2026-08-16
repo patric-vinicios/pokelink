@@ -15,7 +15,10 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
+        <!-- Global loading indicator: any Livewire round-trip past 200ms (F04) -->
+        <div wire:loading.delay class="fixed inset-x-0 top-0 z-50 h-1 bg-indigo-600"></div>
+
+        <div class="min-h-screen flex flex-col bg-gray-100">
             <livewire:layout.navigation />
 
             <!-- Page Heading -->
@@ -28,9 +31,17 @@
             @endif
 
             <!-- Page Content -->
-            <main>
+            <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 {{ $slot }}
             </main>
+
+            <footer class="border-t border-gray-200 bg-white">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-sm text-gray-500">
+                    PokéLink v{{ config('app.version') }}
+                </div>
+            </footer>
         </div>
+
+        <x-toast />
     </body>
 </html>
