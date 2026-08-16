@@ -1,0 +1,202 @@
+# ==============================================================================
+# PokéLink — the whole stack, from `docker compose up -d`.
+#
+# Six services: app (PHP-FPM), web (Nginx), mysql, redis, queue (Horizon), and
+# reverb (WebSocket server). app, queue, and reverb share one image and differ
+# only in the command they run and the CONTAINER_ROLE they carry.
+#
+# Every host port and credential below reads from .env when present, with the
+# .env.example value as its default — so the stack boots before .env exists, and
+# a port conflict is resolved by editing .env rather than this file.
+# ==============================================================================
+
+x-app-build: &app-build
+  context: .
+  dockerfile: docker/php/Dockerfile
+  target: final
+
+# Deliberately minimal. Application configuration is NOT exported here: a real
+# environment variable outranks phpunit.xml, so exporting APP_ENV or DB_* would
+# make `docker compose exec app php artisan test` run as APP_ENV=local against
+# the live database. Everything the application reads comes from .env, which the
+# entrypoint guarantees exists — including the credentials its MySQL probe uses.
+x-app-environment: &app-environment
+  # The container runs as the host UID, which has no entry in /etc/passwd and so
+  # no home directory. Tools that want one — psysh behind `artisan tinker`,
+  # composer — fail without this.
+  HOME: /tmp
+
+x-app-volumes: &app-volumes
+  # The project source is bind-mounted so a PHP edit takes effect without a
+  # rebuild. The three paths below are named volumes layered on top, because
+  # they are produced by the image build (vendor, public/build) or written at
+  # runtime (storage) and must survive the mount.
+  - .:/var/www/html
+  - pokelink_vendor:/var/www/html/vendor
+  - pokelink_build:/var/www/html/public/build
+  - pokelink_storage:/var/www/html/storage
+
+services:
+  # ---------------------------------------------------------------------------
+  # app — PHP-FPM. The only service that migrates and seeds.
+  # ---------------------------------------------------------------------------
+  app:
+    build: *app-build
+    image: pokelink-app:latest
+    container_name: pokelink-app
+    restart: unless-stopped
+    # Runs as the host user so files written through the bind mount (.env, the
+    # public/storage symlink) stay owned by the developer, not by root.
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      <<: *app-environment
+      CONTAINER_ROLE: app
+    volumes: *app-volumes
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Two conditions: the entrypoint finished its whole sequence (the
+      # readiness marker), and PHP-FPM is actually accepting FastCGI. queue and
+      # reverb wait on this, which is what stops a worker booting against an
+      # unmigrated schema.
+      test: ["CMD-SHELL", "test -f /tmp/pokelink-ready && php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    networks: [pokelink]
+
+  # ---------------------------------------------------------------------------
+  # web — Nginx, the only HTTP entry point.
+  # ---------------------------------------------------------------------------
+  web:
+    image: nginx:1.27-alpine
+    container_name: pokelink-web
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - .:/var/www/html:ro
+      - pokelink_build:/var/www/html/public/build:ro
+      # Mounted so Nginx can follow the public/storage symlink.
+      - pokelink_storage:/var/www/html/storage:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1, not localhost: busybox wget resolves localhost to ::1 first
+      # and Nginx listens on IPv4 only, which reads as "connection refused".
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/up || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [pokelink]
+
+  # ---------------------------------------------------------------------------
+  # mysql — schema and session store.
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: pokelink-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-root}"
+      MYSQL_DATABASE: "${DB_DATABASE:-pokelink}"
+      MYSQL_USER: "${DB_USERNAME:-pokelink}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-pokelink}"
+    ports:
+      # Host-side publish only. The application always connects to mysql:3306 on
+      # the compose network, so changing this never breaks the app.
+      - "${FORWARD_DB_PORT:-3306}:3306"
+    volumes:
+      - pokelink_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks: [pokelink]
+
+  # ---------------------------------------------------------------------------
+  # redis — cache store and queue connection.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: pokelink-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    volumes:
+      - pokelink_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [pokelink]
+
+  # ---------------------------------------------------------------------------
+  # queue — Horizon worker. Processes the catalog sync dispatched by the seeder.
+  # ---------------------------------------------------------------------------
+  queue:
+    build: *app-build
+    image: pokelink-app:latest
+    container_name: pokelink-queue
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      <<: *app-environment
+      CONTAINER_ROLE: queue
+    volumes: *app-volumes
+    command: ["php", "artisan", "horizon"]
+    depends_on:
+      app:
+        condition: service_healthy
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    networks: [pokelink]
+
+  # ---------------------------------------------------------------------------
+  # reverb — WebSocket server for real-time chat.
+  # ---------------------------------------------------------------------------
+  reverb:
+    build: *app-build
+    image: pokelink-app:latest
+    container_name: pokelink-reverb
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      <<: *app-environment
+      CONTAINER_ROLE: reverb
+    volumes: *app-volumes
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "${REVERB_PORT:-8080}:8080"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [pokelink]
+
+volumes:
+  pokelink_mysql:
+  pokelink_redis:
+  # Destroyed by `docker compose down -v`, which takes the install marker with
+  # it and is what makes the next boot migrate and seed from scratch.
+  pokelink_storage:
+  pokelink_vendor:
+  pokelink_build:
+
+networks:
+  pokelink:
+    driver: bridge

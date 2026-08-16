@@ -1,0 +1,34 @@
+# Keep the build context small and never bake a developer's local state into
+# the image. Everything excluded here is either rebuilt by a Dockerfile stage,
+# mounted as a named volume, or created by the entrypoint.
+
+.git
+.gitignore
+.gitattributes
+
+# Resolved by the vendor stage.
+vendor
+
+# Resolved and compiled by the assets stage.
+node_modules
+public/build
+public/hot
+
+# Created by the entrypoint; backed by the pokelink_storage named volume.
+storage
+bootstrap/cache/*.php
+
+# Local machine state — the entrypoint writes .env from .env.example.
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+
+# Not part of the runtime.
+docs
+*.pdf
+.claude
+.editorconfig
+.idea
+.vscode
+README.md

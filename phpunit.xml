@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <!--
+            force="true" on every entry is defence in depth. A real environment
+            variable outranks these values, and when that happens the damage is
+            quiet: the suite runs as APP_ENV=local against the live MySQL
+            database, and the Livewire and Volt testing macros never register
+            because the application does not know it is running tests. This is
+            why docker-compose.yml exports no application configuration into the
+            container.
+        -->
+
+        <!--
+            The entrypoint runs `php artisan optimize`, so a compiled config and
+            route cache is always present. Pointing the cache paths at files that
+            `optimize` never writes makes the test run boot uncached.
+        -->
+        <env name="APP_CONFIG_CACHE" value="bootstrap/cache/config.testing.php" force="true"/>
+        <env name="APP_ROUTES_CACHE" value="bootstrap/cache/routes.testing.php" force="true"/>
+        <env name="APP_EVENTS_CACHE" value="bootstrap/cache/events.testing.php" force="true"/>
+        <env name="APP_SERVICES_CACHE" value="bootstrap/cache/services.testing.php" force="true"/>
+        <env name="APP_PACKAGES_CACHE" value="bootstrap/cache/packages.testing.php" force="true"/>
+
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
+        <env name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <env name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <env name="CACHE_STORE" value="array" force="true"/>
+        <!-- SQLite in memory is a test-only choice; the application runs on MySQL. -->
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <env name="DB_URL" value="" force="true"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
+        <env name="PULSE_ENABLED" value="false" force="true"/>
+        <env name="TELESCOPE_ENABLED" value="false" force="true"/>
+        <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
+    </php>
+</phpunit>
