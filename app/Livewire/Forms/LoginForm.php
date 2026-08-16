@@ -22,6 +22,13 @@ class LoginForm extends Form
     public bool $remember = false;
 
     /**
+     * Raw seconds remaining in the throttle lockout, exposed so the login
+     * page can drive a live client-side countdown independent of the
+     * translated message text.
+     */
+    public int $throttleSecondsRemaining = 0;
+
+    /**
      * Attempt to authenticate the request's credentials.
      *
      * @throws ValidationException
@@ -46,6 +53,8 @@ class LoginForm extends Form
      */
     protected function ensureIsNotRateLimited(): void
     {
+        $this->throttleSecondsRemaining = 0;
+
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }
@@ -53,6 +62,8 @@ class LoginForm extends Form
         event(new Lockout(request()));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        $this->throttleSecondsRemaining = $seconds;
 
         throw ValidationException::withMessages([
             'form.email' => trans('auth.throttle', [
