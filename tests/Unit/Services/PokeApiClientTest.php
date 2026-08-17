@@ -106,11 +106,34 @@ test('pokemonDetail merges the base payload with the pt-BR species text', functi
             ],
             'height' => 17,
             'weight' => 905,
+            'base_experience' => 267,
+            'moves' => [
+                ['move' => ['name' => 'flamethrower']],
+                ['move' => ['name' => 'dragon-claw']],
+            ],
         ], 200),
         config('pokeapi.base_uri').'/pokemon-species/6*' => Http::response([
             'flavor_text_entries' => [
                 ['language' => ['name' => 'en'], 'flavor_text' => 'Charizard flies in search of strong opponents.'],
                 ['language' => ['name' => 'pt-BR'], 'flavor_text' => "Charizard voa pelo céu\nem busca de oponentes fortes."],
+            ],
+            'genera' => [
+                ['language' => ['name' => 'en'], 'genus' => 'Flame Pokémon'],
+            ],
+            'evolution_chain' => ['url' => 'https://pokeapi.co/api/v2/evolution-chain/2/'],
+        ], 200),
+        config('pokeapi.base_uri').'/evolution-chain/2*' => Http::response([
+            'chain' => [
+                'species' => ['name' => 'charmander', 'url' => 'https://pokeapi.co/api/v2/pokemon-species/4/'],
+                'evolves_to' => [[
+                    'species' => ['name' => 'charmeleon', 'url' => 'https://pokeapi.co/api/v2/pokemon-species/5/'],
+                    'evolution_details' => [['min_level' => 16, 'trigger' => ['name' => 'level-up']]],
+                    'evolves_to' => [[
+                        'species' => ['name' => 'charizard', 'url' => 'https://pokeapi.co/api/v2/pokemon-species/6/'],
+                        'evolution_details' => [['min_level' => 36, 'trigger' => ['name' => 'level-up']]],
+                        'evolves_to' => [],
+                    ]],
+                ]],
             ],
         ], 200),
     ]);
@@ -136,11 +159,17 @@ test('pokemonDetail merges the base payload with the pt-BR species text', functi
         ])
         ->and($data['height_m'])->toBe(1.7)
         ->and($data['weight_kg'])->toBe(90.5)
+        ->and($data['base_experience'])->toBe(267)
+        ->and($data['moves'])->toBe(['flamethrower', 'dragon-claw'])
         ->and($data['flavor_text'])->toBe('Charizard voa pelo céu em busca de oponentes fortes.')
+        ->and($data['genus'])->toBe('Flame Pokémon')
+        ->and($data['evolutions'])->toHaveCount(3)
+        ->and($data['evolutions'][1]['min_level'])->toBe(16)
+        ->and($data['evolutions'][2]['number'])->toBe(6)
         ->and($data['sprite_url'])->toBe('https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/6.png');
 });
 
-test('pokemonDetail works without flavor text when the species has no pt-BR entry', function () {
+test('pokemonDetail falls back to english when the species has no pt-BR flavor text', function () {
     Http::fake([
         config('pokeapi.base_uri').'/pokemon/1*' => Http::response([
             'id' => 1,
@@ -161,7 +190,7 @@ test('pokemonDetail works without flavor text when the species has no pt-BR entr
     $result = pokeApiTestClient()->pokemonDetail(1);
 
     expect($result->successful())->toBeTrue()
-        ->and($result->data())->not->toHaveKey('flavor_text');
+        ->and($result->data()['flavor_text'])->toBe('A strange seed was planted on its back.');
 });
 
 test('pokemonDetail does not call the species endpoint when the base payload is not found', function () {

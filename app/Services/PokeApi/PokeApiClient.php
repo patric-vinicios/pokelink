@@ -24,6 +24,12 @@ class PokeApiClient
 
     private const CACHE_DEGRADED_LOG_KEY = 'pokeapi:cache-degraded-logged';
 
+    /** @var array<string, int> */
+    private const CACHE_SCHEMA_VERSIONS = [
+        'pokemon' => 2,
+        'pokemon-species' => 2,
+    ];
+
     public function index(): PokeApiResult
     {
         return $this->fetch(
@@ -80,16 +86,33 @@ class PokeApiClient
             resource: 'pokemon-species',
             identifier: $identifier,
             path: "/pokemon-species/{$identifier}",
-            transform: fn (array $body): array => [
-                'flavor_text' => $this->extractFlavorText($body),
-            ],
+            transform: fn (array $body): array => $this->normalizeSpecies($body),
         );
 
         $data = $base->data() ?? [];
-        $flavorText = $species->successful() ? ($species->data()['flavor_text'] ?? null) : null;
+        $speciesData = $species->successful() ? ($species->data() ?? []) : [];
 
-        if (filled($flavorText)) {
-            $data['flavor_text'] = $flavorText;
+        foreach (['flavor_text', 'genus'] as $field) {
+            if (filled($speciesData[$field] ?? null)) {
+                $data[$field] = $speciesData[$field];
+            }
+        }
+
+        $evolutionChainNumber = $speciesData['evolution_chain_number'] ?? null;
+
+        if (is_int($evolutionChainNumber)) {
+            $evolution = $this->fetch(
+                resource: 'evolution-chain',
+                identifier: (string) $evolutionChainNumber,
+                path: "/evolution-chain/{$evolutionChainNumber}",
+                transform: fn (array $body): array => [
+                    'evolutions' => $this->normalizeEvolutionChain($body['chain'] ?? []),
+                ],
+            );
+
+            if ($evolution->successful()) {
+                $data['evolutions'] = $evolution->data()['evolutions'] ?? [];
+            }
         }
 
         return new PokeApiResult(PokeApiStatus::Success, $data, 'pokemon', $identifier);
@@ -104,7 +127,9 @@ class PokeApiClient
      */
     private function fetch(string $resource, string $identifier, string $path, array $query = [], ?\Closure $transform = null): PokeApiResult
     {
-        $cacheKey = "pokeapi:{$resource}:{$identifier}";
+        $cacheVersion = self::CACHE_SCHEMA_VERSIONS[$resource] ?? null;
+        $versionSegment = $cacheVersion !== null ? ":v{$cacheVersion}" : '';
+        $cacheKey = "pokeapi:{$resource}{$versionSegment}:{$identifier}";
 
         $cached = $this->cacheGet($cacheKey);
 
@@ -383,6 +408,13 @@ class PokeApiClient
             'stats' => $this->normalizeStats($body['stats'] ?? []),
             'height_m' => isset($body['height']) ? round($body['height'] / 10, 1) : null,
             'weight_kg' => isset($body['weight']) ? round($body['weight'] / 10, 1) : null,
+            'base_experience' => isset($body['base_experience']) ? (int) $body['base_experience'] : null,
+            'moves' => collect($body['moves'] ?? [])
+                ->map(fn (array $entry) => $entry['move']['name'] ?? null)
+                ->filter()
+                ->take(24)
+                ->values()
+                ->all(),
         ];
     }
 
@@ -410,17 +442,58 @@ class PokeApiClient
         return $normalized;
     }
 
-    private function extractFlavorText(array $body): ?string
+    private function normalizeSpecies(array $body): array
     {
-        foreach ($body['flavor_text_entries'] ?? [] as $entry) {
-            $language = $entry['language']['name'] ?? null;
+        return [
+            'flavor_text' => $this->extractLocalizedValue($body['flavor_text_entries'] ?? [], 'flavor_text'),
+            'genus' => $this->extractLocalizedValue($body['genera'] ?? [], 'genus'),
+            'evolution_chain_number' => $this->extractNumberFromUrl($body['evolution_chain']['url'] ?? ''),
+        ];
+    }
 
-            if ($language === 'pt-BR' && filled($entry['flavor_text'] ?? null)) {
-                return trim(preg_replace('/\s+/', ' ', (string) $entry['flavor_text']));
+    private function extractLocalizedValue(array $entries, string $field): ?string
+    {
+        foreach (['pt-BR', 'en'] as $preferredLanguage) {
+            foreach ($entries as $entry) {
+                $language = $entry['language']['name'] ?? null;
+
+                if ($language === $preferredLanguage && filled($entry[$field] ?? null)) {
+                    return trim(preg_replace('/\s+/', ' ', (string) $entry[$field]));
+                }
             }
         }
 
         return null;
+    }
+
+    /**
+     * @return list<array{number: int|null, name: string, min_level: int|null, trigger: string|null, sprite_url: string|null}>
+     */
+    private function normalizeEvolutionChain(array $root): array
+    {
+        $stages = [];
+
+        $walk = function (array $node, ?array $evolutionDetail = null) use (&$stages, &$walk): void {
+            $number = $this->extractNumberFromUrl($node['species']['url'] ?? '');
+
+            $stages[] = [
+                'number' => $number,
+                'name' => (string) ($node['species']['name'] ?? ''),
+                'min_level' => isset($evolutionDetail['min_level']) ? (int) $evolutionDetail['min_level'] : null,
+                'trigger' => $evolutionDetail['trigger']['name'] ?? null,
+                'sprite_url' => $number !== null ? $this->officialArtworkUrl($number) : null,
+            ];
+
+            foreach ($node['evolves_to'] ?? [] as $next) {
+                $walk($next, $next['evolution_details'][0] ?? null);
+            }
+        };
+
+        if ($root !== []) {
+            $walk($root);
+        }
+
+        return array_values(array_filter($stages, fn (array $stage): bool => $stage['name'] !== ''));
     }
 
     private function officialArtworkUrl(int $number): string
