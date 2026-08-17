@@ -11,6 +11,22 @@ cd "$(dirname "$0")/.."
 if [[ ! -f .env ]]; then
     echo "Creating .env from .env.example..."
     cp .env.example .env
+else
+    # .env already existed — .env.example may have grown keys since it was
+    # created (e.g. REVERB_BROADCAST_HOST, added when the broadcaster's
+    # server-side host and the browser's host turned out to need different
+    # values). A missing key fails silently — the app falls back to
+    # whatever env()'s default is — rather than erroring loudly, so
+    # reconcile instead of trusting an existing .env is still complete.
+    added=()
+    while IFS= read -r line; do
+        key="${line%%=*}"
+        [[ -z "${key}" || "${line}" == \#* || "${line}" != *=* ]] && continue
+        grep -q "^${key}=" .env || { printf '%s\n' "${line}" >> .env; added+=("${key}"); }
+    done < .env.example
+    if [[ ${#added[@]} -gt 0 ]]; then
+        echo "Added missing .env keys from .env.example: ${added[*]}"
+    fi
 fi
 
 port() { grep -m1 "^${1}=" .env 2>/dev/null | cut -d= -f2-; }
