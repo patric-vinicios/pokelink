@@ -137,7 +137,7 @@ test('pokemonDetail merges the base payload with the pt-BR species text', functi
         ->and($data['height_m'])->toBe(1.7)
         ->and($data['weight_kg'])->toBe(90.5)
         ->and($data['flavor_text'])->toBe('Charizard voa pelo céu em busca de oponentes fortes.')
-        ->and($data['sprite_url'])->toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png');
+        ->and($data['sprite_url'])->toBe('https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/6.png');
 });
 
 test('pokemonDetail works without flavor text when the species has no pt-BR entry', function () {

@@ -425,6 +425,11 @@ class PokeApiClient
 
     private function officialArtworkUrl(int $number): string
     {
-        return "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{$number}.png";
+        // jsdelivr mirrors the same PokeAPI/sprites GitHub repo through an
+        // actual CDN. raw.githubusercontent.com serves the identical files
+        // but isn't meant for hotlinked traffic at this volume and
+        // rate-limits hard (503 "too many requests") once a page renders a
+        // full grid of sprites.
+        return "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/{$number}.png";
     }
 }
