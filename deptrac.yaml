@@ -1,0 +1,59 @@
+deptrac:
+    paths:
+        - ./app
+
+    layers:
+        - name: Models
+          collectors:
+              - type: directory
+                value: app/Models/.*
+
+        - name: PokeApiClient
+          collectors:
+              - type: directory
+                value: app/Services/PokeApi/.*
+
+        - name: Events
+          collectors:
+              - type: directory
+                value: app/Events/.*
+
+        - name: Policies
+          collectors:
+              - type: directory
+                value: app/Policies/.*
+
+        - name: Http
+          collectors:
+              - type: directory
+                value: app/Http/.*
+
+        - name: LivewireSupport
+          collectors:
+              - type: directory
+                value: app/Livewire/.*
+
+        - name: Jobs
+          collectors:
+              - type: directory
+                value: app/Jobs/.*
+
+    ruleset:
+        # Leaves: the network client and the models must not reach back into
+        # any other app/ layer.
+        PokeApiClient: []
+        Models: []
+        Events:
+            - Models
+        Policies:
+            - Models
+        Http:
+            - Models
+        LivewireSupport:
+            - Models
+        # Only Jobs (the catalog sync) may call the PokeAPI client — mirrors
+        # the "only code allowed to reach the network" rule in AGENTS.md.
+        Jobs:
+            - PokeApiClient
+            - Models
+            - Events
