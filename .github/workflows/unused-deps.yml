@@ -15,4 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/build-app-image
-      - run: docker run --rm -e CONTAINER_ROLE=ci pokelink-app:ci vendor/bin/composer-unused
+      # laravel/reverb excluded: driven by `reverb:start` and config/reverb.php,
+      # never a `use Laravel\Reverb\...` statement composer-unused could see.
+      - run: docker run --rm -e CONTAINER_ROLE=ci pokelink-app:ci vendor/bin/composer-unused --excludePackage=laravel/reverb
