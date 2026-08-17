@@ -40,6 +40,7 @@
             </div>
         </div>
 
+        <livewire:pokemon.detail-modal />
         <x-toast />
     </body>
 </html>
