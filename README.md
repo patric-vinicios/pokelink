@@ -155,11 +155,19 @@ docker compose exec app php artisan test
 ```
 
 A suíte roda contra um SQLite em memória (configurado em `phpunit.xml`), uma escolha exclusiva de
-teste — a aplicação em si roda sobre MySQL. Nenhum teste acessa a rede.
+teste — a aplicação em si roda sobre MySQL. Nenhum teste acessa a rede (todo acesso ao PokeAPI é
+substituído por `Http::fake`).
 
-Os testes desta entrega cobrem o contrato de configuração (`EnvironmentConfigTest`), as contas
-documentadas (`UserSeederTest`) e o caminho feliz do boot (`BootSmokeTest`), além da suíte que o
-Breeze traz. A suíte completa de 35+ casos é escopo da F13.
+176 casos (617 assertions) em 25 arquivos, ~15s — cobrindo autenticação, registro, shell, busca
+com cache, detalhes, favoritos (incluindo idempotência e autorização cross-user), perfil, chat
+(incluindo autorização de canal), sincronização do catálogo e o cliente PokeAPI (retry, timeout,
+circuito, rate limit).
+
+Para rodar um grupo específico:
+
+```bash
+docker compose exec app php artisan test --filter=Favorite
+```
 
 ---
 
