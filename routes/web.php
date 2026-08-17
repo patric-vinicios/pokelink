@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Livewire\Volt\Volt;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,13 +13,12 @@ use Illuminate\Support\Facades\Route;
 | and intended-URL restore behaviour).
 |
 | These four routes match the shell's navigation (F04): Início, Favoritos,
-| Chat, and Meu Perfil. `/` renders a placeholder until F07 turns it into the
-| Pokémon search screen; /favoritos and /chat render a placeholder until F10
-| and F12 replace them.
+| Chat, and Meu Perfil. `/` is the Pokémon search screen (F07); /favoritos
+| and /chat render a placeholder until F10 and F12 replace them.
 |
 */
 
-Route::view('/', 'dashboard')
+Volt::route('/', 'pages.pokemon.search')
     ->middleware(['auth'])
     ->name('dashboard');
 
