@@ -7,6 +7,7 @@ return [
     'email' => 'O campo :attribute deve ser um endereço de e-mail válido.',
     'unique' => 'O :attribute informado já está em uso.',
     'confirmed' => 'A confirmação do campo :attribute não confere.',
+    'current_password' => 'A senha atual está incorreta.',
 
     'min' => [
         'array' => 'O campo :attribute deve ter pelo menos :min itens.',
