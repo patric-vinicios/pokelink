@@ -68,4 +68,18 @@ return [
         'time' => '03:00',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Search
+    |--------------------------------------------------------------------------
+    |
+    | Shared between F07 (search screen) and F08 (results grid, next wave) so
+    | both render the same page size against the same query.
+    |
+    */
+
+    'search' => [
+        'per_page' => 20,
+    ],
+
 ];
