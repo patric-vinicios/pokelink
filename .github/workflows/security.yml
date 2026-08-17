@@ -22,15 +22,24 @@ jobs:
       # sidesteps whatever mangled the expression's substitution in-flight
       # on an earlier run (docker saw `-v :/app`, an empty host path).
       #
-      # Retried: `audit` fetches the advisory database over the network, and
-      # a transient failure there is indistinguishable from a real advisory
-      # by exit code alone. A genuine advisory fails all 3 attempts
-      # identically; a network blip usually clears within one retry — this
-      # gate hit exactly that after the composer-install network flakiness
-      # that also (transiently) broke test/lint/duplication/boot the same day.
-      - run: |
+      # `audit` fetches the advisory database over the network — GitHub
+      # Actions runners share IP ranges saturated with traffic from every
+      # other workflow on the platform, so unauthenticated calls to
+      # GitHub's own API routinely hit its anonymous rate limit there in a
+      # way a single home connection never does (this failed 3 times
+      # straight in CI while reproducing clean, every time, run locally in
+      # between). COMPOSER_AUTH with the workflow's own auto-issued
+      # GITHUB_TOKEN authenticates those calls instead — no secret to
+      # configure, GitHub provides this token to every workflow run.
+      # Retried too: a real advisory fails identically every attempt, so
+      # this doesn't mask one.
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           for attempt in 1 2 3; do
-            if docker run --rm -v "$PWD":/app -w /app composer:2 audit; then
+            if docker run --rm -v "$PWD":/app -w /app \
+              -e COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"${GH_TOKEN}\"}}" \
+              composer:2 audit; then
               exit 0
             fi
             echo "audit attempt ${attempt} failed, retrying..." >&2
