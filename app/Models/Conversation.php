@@ -49,12 +49,32 @@ class Conversation extends Model
      */
     public static function betweenUsers(User $a, User $b): self
     {
-        [$lowerId, $higherId] = $a->id < $b->id ? [$a->id, $b->id] : [$b->id, $a->id];
+        [$lowerId, $higherId] = static::orderedPair($a->id, $b->id);
 
         return static::firstOrCreate([
             'user_one_id' => $lowerId,
             'user_two_id' => $higherId,
         ]);
+    }
+
+    /**
+     * Looks up the conversation between two user ids without creating one —
+     * used to open a thread that may not exist yet without writing a row
+     * just because someone viewed it.
+     */
+    public static function findBetween(int $userIdA, int $userIdB): ?self
+    {
+        [$lowerId, $higherId] = static::orderedPair($userIdA, $userIdB);
+
+        return static::where('user_one_id', $lowerId)->where('user_two_id', $higherId)->first();
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     */
+    private static function orderedPair(int $userIdA, int $userIdB): array
+    {
+        return $userIdA < $userIdB ? [$userIdA, $userIdB] : [$userIdB, $userIdA];
     }
 
     public function scopeForUser(Builder $query, int $userId): Builder
