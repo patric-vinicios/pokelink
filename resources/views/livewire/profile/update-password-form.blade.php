@@ -10,7 +10,9 @@ use Livewire\Volt\Component;
 new class extends Component
 {
     public string $current_password = '';
+
     public string $password = '';
+
     public string $password_confirmation = '';
 
     /**
@@ -81,44 +83,68 @@ new class extends Component
     }
 }; ?>
 
-<section>
+<section class="profile-inline-form profile-inline-form--security">
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Alterar senha') }}
-        </h2>
-
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __('Use uma senha longa e única para manter sua conta segura.') }}
-        </p>
+        <div>
+            <h3>{{ __('Senha de acesso') }}</h3>
+            <p>{{ __('Use uma senha longa e única para manter sua conta segura.') }}</p>
+        </div>
     </header>
 
-    <form wire:submit="updatePassword" class="mt-6 space-y-6" x-data>
-        <div>
+    <form wire:submit="updatePassword" class="profile-form" x-data>
+        <div class="trainer-field">
             <x-input-label for="update_password_current_password" :value="__('Senha atual')" />
-            <x-text-input wire:model="current_password" id="update_password_current_password" name="current_password" type="password" class="mt-1 block w-full" autocomplete="off" />
+            <div class="trainer-input-wrap">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <rect x="4" y="10" width="16" height="11" rx="2.5" />
+                    <path stroke-linecap="round" d="M8 10V7a4 4 0 0 1 8 0v3" />
+                </svg>
+                <x-text-input wire:model="current_password" id="update_password_current_password" name="current_password" type="password" class="trainer-input" autocomplete="off" placeholder="Digite sua senha atual" />
+            </div>
             <x-input-error :messages="$errors->get('current_password')" class="mt-2" />
         </div>
 
-        <div>
+        <div class="trainer-field">
             <x-input-label for="update_password_password" :value="__('Nova senha')" />
-            <x-text-input wire:model="password" id="update_password_password" name="password" type="password" class="mt-1 block w-full" autocomplete="new-password" />
+            <div class="trainer-input-wrap">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a5 5 0 1 0-4.2 4.9L13 14h2v2h2v2h3l1-1-6.2-6.2A5 5 0 0 0 15 7Z" />
+                </svg>
+                <x-text-input wire:model="password" id="update_password_password" name="password" type="password" class="trainer-input" autocomplete="new-password" placeholder="Crie uma nova senha" />
+            </div>
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
-        <div>
+        <div class="trainer-field">
             <x-input-label for="update_password_password_confirmation" :value="__('Confirmar nova senha')" />
-            <x-text-input wire:model="password_confirmation" id="update_password_password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" autocomplete="new-password" />
+            <div class="trainer-input-wrap">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+                </svg>
+                <x-text-input wire:model="password_confirmation" id="update_password_password_confirmation" name="password_confirmation" type="password" class="trainer-input" autocomplete="new-password" placeholder="Repita a nova senha" />
+            </div>
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
-        <div class="flex items-center gap-4">
-            <x-primary-button
+        <p class="profile-password-hint">
+            <span class="mini-pokeball" aria-hidden="true"></span>
+            Combine letras, números e símbolos para uma senha mais forte.
+        </p>
+
+        <div class="profile-form-actions">
+            <button
+                type="submit"
+                class="trainer-primary-button trainer-primary-button--red"
                 x-bind:disabled="!$wire.current_password && !$wire.password && !$wire.password_confirmation"
                 wire:loading.attr="disabled"
                 wire:target="updatePassword"
             >
-                {{ __('Salvar') }}
-            </x-primary-button>
+                <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.5 9V6.8a4.5 4.5 0 0 1 9 0V9m-10 0h11a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Z" />
+                </svg>
+                <span wire:loading.remove wire:target="updatePassword">{{ __('Atualizar senha') }}</span>
+                <span wire:loading wire:target="updatePassword">{{ __('Atualizando...') }}</span>
+            </button>
         </div>
     </form>
 </section>

@@ -33,43 +33,41 @@ new class extends Component
     }
 }; ?>
 
-<section x-data="{ initialName: @js($name) }">
+<section class="profile-inline-form profile-inline-form--identity" x-data="{ initialName: @js($name) }">
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Dados da conta') }}
-        </h2>
-
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __('Atualize o nome exibido na plataforma.') }}
-        </p>
+        <div>
+            <h3>{{ __('Nome do treinador') }}</h3>
+            <p>{{ __('Este é o nome exibido no PokéLink.') }}</p>
+        </div>
     </header>
 
-    <form wire:submit="updateProfileInformation" class="mt-6 space-y-6">
-        <div>
+    <form wire:submit="updateProfileInformation" class="profile-form">
+        <div class="trainer-field">
             <x-input-label for="name" :value="__('Nome')" />
-            <x-text-input wire:model="name" id="name" name="name" type="text" class="mt-1 block w-full" required autofocus autocomplete="name" />
+            <div class="trainer-input-wrap">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <circle cx="12" cy="8" r="3.5" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.5 20a6.5 6.5 0 0 1 13 0" />
+                </svg>
+                <x-text-input wire:model="name" id="name" name="name" type="text" class="trainer-input" required autocomplete="name" />
+            </div>
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
-        <div>
-            <x-input-label for="email" :value="__('E-mail')" />
-            <x-text-input :value="auth()->user()->email" id="email" type="email" class="mt-1 block w-full bg-gray-100 text-gray-500" disabled />
-            <p class="mt-1 text-sm text-gray-500">{{ __('O e-mail não pode ser alterado.') }}</p>
-        </div>
-
-        <div>
-            <x-input-label :value="__('Conta criada em')" />
-            <p class="mt-1 text-sm text-gray-700">{{ auth()->user()->created_at->format('d/m/Y') }}</p>
-        </div>
-
-        <div class="flex items-center gap-4">
-            <x-primary-button
+        <div class="profile-form-actions">
+            <button
+                type="submit"
+                class="trainer-primary-button"
                 x-bind:disabled="$wire.name === initialName"
                 wire:loading.attr="disabled"
                 wire:target="updateProfileInformation"
             >
-                {{ __('Salvar') }}
-            </x-primary-button>
+                <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4 10 4 4 8-8" />
+                </svg>
+                <span wire:loading.remove wire:target="updateProfileInformation">{{ __('Salvar alterações') }}</span>
+                <span wire:loading wire:target="updateProfileInformation">{{ __('Salvando...') }}</span>
+            </button>
         </div>
     </form>
 </section>
