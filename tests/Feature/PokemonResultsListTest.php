@@ -74,20 +74,18 @@ test('requesting a page past the last one redirects to the last valid page', fun
         ->assertSet('paginators.page', 2);
 });
 
-test('clicking a card leads to pokemon show with the page and filter context', function () {
+test('clicking a card opens the detail modal without leaving the catalog', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     $charmander = Pokemon::factory()->create(['number' => 4, 'name' => 'charmander', 'slug' => 'charmander']);
     $charmander->types()->attach($fire->id);
 
     $response = $this->get('/?q=char&tipo=fogo');
 
-    $expectedHref = route('pokemon.show', ['slug' => 'charmander']).'?'.http_build_query([
-        'q' => 'char',
-        'tipo' => 'fogo',
-        'page' => 1,
-    ]);
-
-    $response->assertOk()->assertSee($expectedHref);
+    $response->assertOk()
+        ->assertSee('pokemon.detail-modal', false)
+        ->assertSee('open-pokemon', false)
+        ->assertSee("slug: 'charmander'", false)
+        ->assertDontSee('href="'.route('pokemon.show', ['slug' => 'charmander']), false);
 });
 
 test('a broken sprite url renders the placeholder without breaking the card layout', function () {

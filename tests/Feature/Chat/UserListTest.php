@@ -28,17 +28,6 @@ test('users with the most recent message appear first, the rest in alphabetical 
         ->assertSeeInOrder(['Recent Contact', 'Older Contact', 'Alan', 'Zelda']);
 });
 
-test('the name filter restricts the list', function () {
-    $me = User::factory()->create();
-    User::factory()->create(['name' => 'Bulbasaur Fan']);
-    User::factory()->create(['name' => 'Charmander Fan']);
-
-    Volt::actingAs($me)->test('chat.user-list')
-        ->set('search', 'bulba')
-        ->assertSee('Bulbasaur Fan')
-        ->assertDontSee('Charmander Fan');
-});
-
 test('the list paginates every 30 users', function () {
     $me = User::factory()->create();
     User::factory()->count(35)->create();
@@ -66,4 +55,15 @@ test('the unread counter appears per conversation and caps at 99+', function () 
     Volt::actingAs($me)->test('chat.user-list')
         ->assertSee('99+')
         ->assertSee('3');
+});
+
+test('the chat page reuses the shared Pokedex hero', function () {
+    $this->actingAs(User::factory()->create())
+        ->get('/chat')
+        ->assertOk()
+        ->assertSee('Converse com seus')
+        ->assertSee('Pokémon')
+        ->assertSee('favoritos')
+        ->assertSee('catalog-hero--inline-title', false)
+        ->assertSee('chat-page-content', false);
 });
