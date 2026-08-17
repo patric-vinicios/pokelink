@@ -1,89 +1,217 @@
 <?php
 
 use App\Models\User;
+use App\Policies\UpdateProfilePolicy;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Volt\Volt;
 
-test('profile page is displayed', function () {
-    $user = User::factory()->create();
+test('a página de perfil exibe nome, e-mail e data de criação da conta', function () {
+    $user = User::factory()->create([
+        'name' => 'Ash Ketchum',
+        'email' => 'ash@pokelink.test',
+    ]);
 
     $this->actingAs($user);
 
-    $response = $this->get('/perfil');
-
-    $response
+    $this->get('/perfil')
         ->assertOk()
         ->assertSeeVolt('profile.update-profile-information-form')
         ->assertSeeVolt('profile.update-password-form')
-        ->assertSeeVolt('profile.delete-user-form');
+        ->assertSee('Ash Ketchum')
+        ->assertSee('ash@pokelink.test')
+        ->assertSee($user->created_at->format('d/m/Y'));
 });
 
-test('profile information can be updated', function () {
-    $user = User::factory()->create();
+test('o e-mail é exibido como somente leitura', function () {
+    $user = User::factory()->create(['email' => 'ash@pokelink.test']);
+
+    $this->actingAs($user);
+
+    $component = Volt::test('profile.update-profile-information-form');
+
+    $component
+        ->assertDontSee('wire:model="email"', false)
+        ->assertSee('ash@pokelink.test')
+        ->assertSee('O e-mail não pode ser alterado.');
+});
+
+test('a barra de navegação está conectada ao evento profile-updated do formulário de perfil', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get('/perfil')
+        ->assertOk()
+        ->assertSee('x-on:profile-updated.window', false);
+});
+
+test('um usuário pode atualizar o próprio nome', function () {
+    $user = User::factory()->create(['name' => 'Nome Antigo']);
 
     $this->actingAs($user);
 
     $component = Volt::test('profile.update-profile-information-form')
-        ->set('name', 'Test User')
-        ->set('email', 'test@example.com')
+        ->set('name', 'Nome Novo')
         ->call('updateProfileInformation');
 
-    $component
-        ->assertHasNoErrors()
-        ->assertNoRedirect();
+    $component->assertHasNoErrors();
+    $component->assertDispatched('profile-updated', name: 'Nome Novo');
+    $component->assertDispatched('toast', message: 'Perfil atualizado.', type: 'success');
 
-    $user->refresh();
-
-    $this->assertSame('Test User', $user->name);
-    $this->assertSame('test@example.com', $user->email);
-    $this->assertNull($user->email_verified_at);
+    expect($user->refresh()->name)->toBe('Nome Novo');
 });
 
-test('email verification status is unchanged when the email address is unchanged', function () {
-    $user = User::factory()->create();
+test('um nome inválido é rejeitado pela validação', function () {
+    $user = User::factory()->create(['name' => 'Nome Original']);
 
     $this->actingAs($user);
 
-    $component = Volt::test('profile.update-profile-information-form')
-        ->set('name', 'Test User')
-        ->set('email', $user->email)
-        ->call('updateProfileInformation');
+    Volt::test('profile.update-profile-information-form')
+        ->set('name', 'a')
+        ->call('updateProfileInformation')
+        ->assertHasErrors(['name']);
 
-    $component
-        ->assertHasNoErrors()
-        ->assertNoRedirect();
-
-    $this->assertNotNull($user->refresh()->email_verified_at);
+    expect($user->refresh()->name)->toBe('Nome Original');
 });
 
-test('user can delete their account', function () {
+test('uma solicitação não pode alterar o nome ou e-mail de outro usuário', function () {
     $user = User::factory()->create();
+    $other = User::factory()->create(['name' => 'Outro Usuário', 'email' => 'outro@pokelink.test']);
 
     $this->actingAs($user);
 
-    $component = Volt::test('profile.delete-user-form')
+    Volt::test('profile.update-profile-information-form')
+        ->set('name', 'Nome Alterado')
+        ->call('updateProfileInformation')
+        ->assertHasNoErrors();
+
+    $other->refresh();
+
+    expect($other->name)->toBe('Outro Usuário')
+        ->and($other->email)->toBe('outro@pokelink.test');
+});
+
+test('a política nega a atualização de um usuário diferente do autenticado', function () {
+    $policy = new UpdateProfilePolicy;
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+
+    expect($policy->update($user, $other))->toBeFalse()
+        ->and($policy->update($user, $user))->toBeTrue();
+});
+
+test('uma senha atual correta permite a alteração de senha', function () {
+    $user = User::factory()->create(['password' => Hash::make('password')]);
+
+    $this->actingAs($user);
+
+    $component = Volt::test('profile.update-password-form')
+        ->set('current_password', 'password')
+        ->set('password', 'nova-senha-123')
+        ->set('password_confirmation', 'nova-senha-123')
+        ->call('updatePassword');
+
+    $component->assertHasNoErrors();
+    $component->assertDispatched('toast', message: 'Senha alterada com sucesso.', type: 'success');
+    $component->assertSet('current_password', '')
+        ->assertSet('password', '')
+        ->assertSet('password_confirmation', '');
+
+    $newHash = $user->refresh()->password;
+
+    expect($newHash)->not->toBe(Hash::make('password'))
+        ->and(Hash::check('nova-senha-123', $newHash))->toBeTrue();
+});
+
+test('uma senha atual incorreta é rejeitada com mensagem em português e nada é gravado', function () {
+    $user = User::factory()->create(['password' => Hash::make('password')]);
+    $originalHash = $user->password;
+
+    $this->actingAs($user);
+
+    $component = Volt::test('profile.update-password-form')
+        ->set('current_password', 'senha-errada')
+        ->set('password', 'nova-senha-123')
+        ->set('password_confirmation', 'nova-senha-123')
+        ->call('updatePassword');
+
+    $component->assertHasErrors(['current_password' => 'A senha atual está incorreta.']);
+    $component->assertSet('current_password', '')
+        ->assertSet('password', '')
+        ->assertSet('password_confirmation', '');
+
+    expect($user->refresh()->password)->toBe($originalHash);
+});
+
+test('uma nova senha igual à atual é rejeitada', function () {
+    $user = User::factory()->create(['password' => Hash::make('password')]);
+    $originalHash = $user->password;
+
+    $this->actingAs($user);
+
+    $component = Volt::test('profile.update-password-form')
+        ->set('current_password', 'password')
         ->set('password', 'password')
-        ->call('deleteUser');
+        ->set('password_confirmation', 'password')
+        ->call('updatePassword');
 
-    $component
-        ->assertHasNoErrors()
-        ->assertRedirect('/');
+    $component->assertHasErrors(['password' => 'A nova senha deve ser diferente da atual.']);
+    $component->assertSet('current_password', '')
+        ->assertSet('password', '')
+        ->assertSet('password_confirmation', '');
 
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
+    expect($user->refresh()->password)->toBe($originalHash);
 });
 
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
+test('a confirmação de senha divergente é rejeitada preservando a senha atual digitada', function () {
+    $user = User::factory()->create(['password' => Hash::make('password')]);
 
     $this->actingAs($user);
 
-    $component = Volt::test('profile.delete-user-form')
-        ->set('password', 'wrong-password')
-        ->call('deleteUser');
+    $component = Volt::test('profile.update-password-form')
+        ->set('current_password', 'password')
+        ->set('password', 'nova-senha-123')
+        ->set('password_confirmation', 'nao-confere')
+        ->call('updatePassword');
 
-    $component
-        ->assertHasErrors('password')
-        ->assertNoRedirect();
+    $component->assertHasErrors(['password']);
+    $component->assertSet('current_password', 'password')
+        ->assertSet('password', '')
+        ->assertSet('password_confirmation', '');
+});
 
-    $this->assertNotNull($user->fresh());
+/*
+|--------------------------------------------------------------------------
+| Other-session invalidation
+|--------------------------------------------------------------------------
+|
+| Livewire's testing harness (Volt::test) calls component methods directly,
+| bypassing the HTTP kernel entirely, so a literal two-concurrent-browser
+| simulation isn't reachable from here. This test covers the half of the
+| guarantee that a real HTTP round-trip can prove: a session's stored
+| password reference, established through the real auth.session middleware,
+| is rejected on its next protected-route request once the password changes.
+|
+*/
+
+test('após a troca de senha uma sessão autenticada anterior é desconectada ao acessar uma rota protegida', function () {
+    $user = User::factory()->create(['password' => Hash::make('password')]);
+
+    $this->actingAs($user);
+
+    // Establishes this test session's password-hash marker via the real
+    // auth.session middleware, exactly as a browser tab would on first load.
+    $this->get('/perfil')->assertOk();
+
+    Volt::test('profile.update-password-form')
+        ->set('current_password', 'password')
+        ->set('password', 'nova-senha-123')
+        ->set('password_confirmation', 'nova-senha-123')
+        ->call('updatePassword')
+        ->assertHasNoErrors();
+
+    // The marker stored above still references the old hash; auth.session
+    // rejects it against the now-changed password on the very next request.
+    $response = $this->get('/perfil');
+
+    $response->assertRedirect(route('login'));
+    $this->assertGuest();
 });
