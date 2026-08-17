@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 679" preserveAspectRatio="none">
+  <defs>
+    <radialGradient id="orb" cx="43%" cy="38%" r="66%"><stop stop-color="#5c82bf" stop-opacity=".4"/><stop offset=".46" stop-color="#244a82" stop-opacity=".25"/><stop offset="1" stop-color="#081d44" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g opacity=".84">
+    <circle cx="-4" cy="382" r="75" fill="url(#orb)" stroke="#426ca9" stroke-opacity=".28" stroke-width="2"/>
+    <circle cx="-4" cy="382" r="57" fill="none" stroke="#8cb4ed" stroke-opacity=".11" stroke-width="16"/>
+    <path d="M-79 375h150" stroke="#94b6e6" stroke-opacity=".17" stroke-width="15"/>
+    <circle cx="-4" cy="382" r="21" fill="#8ba7d0" fill-opacity=".17" stroke="#bcd0ed" stroke-opacity=".15" stroke-width="9"/>
+    <circle cx="-4" cy="382" r="9" fill="#bdcce2" fill-opacity=".17"/>
+  </g>
+</svg>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 210" role="img" aria-labelledby="title desc">
+  <title id="title">PokéLink</title>
+  <desc id="desc">Logotipo PokéLink em amarelo e azul com uma Poké Bola vermelha.</desc>
+  <defs>
+    <linearGradient id="ballRed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5861"/>
+      <stop offset=".55" stop-color="#ed2939"/>
+      <stop offset="1" stop-color="#b90f27"/>
+    </linearGradient>
+    <linearGradient id="letterGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff36d"/>
+      <stop offset=".44" stop-color="#ffd62f"/>
+      <stop offset="1" stop-color="#f2a915"/>
+    </linearGradient>
+    <linearGradient id="letterShine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffbd0" stop-opacity=".9"/>
+      <stop offset=".35" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="logoShadow" x="-25%" y="-30%" width="150%" height="180%">
+      <feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#071a3d" flood-opacity=".55"/>
+    </filter>
+    <filter id="ballShadow" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="5" stdDeviation="3" flood-color="#061633" flood-opacity=".55"/>
+    </filter>
+  </defs>
+
+  <g transform="translate(165 80) scale(2)" filter="url(#ballShadow)">
+    <circle r="32" fill="#fff" stroke="#082654" stroke-width="7"/>
+    <path d="M-29-4A30 30 0 0 1 29-4H8a11 11 0 0 0-16 0Z" fill="url(#ballRed)"/>
+    <path d="M-30-3h60" stroke="#082654" stroke-width="8"/>
+    <circle r="11" fill="#fff" stroke="#082654" stroke-width="6"/>
+    <circle r="4.5" fill="#dbeaff"/>
+    <path d="M-18-18c7-7 18-9 27-5" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="5" opacity=".8"/>
+  </g>
+
+  <g transform="translate(0 -47) scale(1 1.5) rotate(-2 165 127)" filter="url(#logoShadow)" font-family="Arial Rounded MT Bold, Nunito, Arial Black, sans-serif" font-size="65" font-weight="900" letter-spacing="-5" text-anchor="middle" stroke-linejoin="round" paint-order="stroke fill">
+    <text x="165" y="157" fill="#1472d3" stroke="#071c46" stroke-width="18">PokéLink</text>
+    <text x="165" y="153" fill="url(#letterGold)" stroke="#f7fbff" stroke-width="9">PokéLink</text>
+    <text x="165" y="153" fill="url(#letterGold)" stroke="#166bc2" stroke-width="5">PokéLink</text>
+    <text x="165" y="149" fill="url(#letterShine)" stroke="none" opacity=".65">PokéLink</text>
+  </g>
+
+  <g fill="#fff7a0" opacity=".95">
+    <path d="M24 96l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/>
+    <path d="M305 98l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/>
+  </g>
+</svg>
