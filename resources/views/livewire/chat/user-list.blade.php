@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Reactive;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -10,20 +10,14 @@ new class extends Component
 {
     use WithPagination;
 
+    #[Reactive]
     public ?int $selectedUserId = null;
-
-    public string $search = '';
 
     public int $authUserId;
 
     public function mount(): void
     {
         $this->authUserId = auth()->id();
-    }
-
-    public function updatedSearch(): void
-    {
-        $this->resetPage();
     }
 
     /**
@@ -43,7 +37,6 @@ new class extends Component
 
         $users = User::query()
             ->where('users.id', '!=', $authUserId)
-            ->when($this->search !== '', fn (Builder $query) => $query->where('users.name', 'like', '%'.$this->search.'%'))
             ->leftJoin('conversations', function ($join) use ($authUserId) {
                 $join->where(function ($join) use ($authUserId) {
                     $join->where('conversations.user_one_id', $authUserId)
@@ -55,6 +48,11 @@ new class extends Component
             })
             ->select('users.id', 'users.name')
             ->selectRaw('conversations.last_message_at as last_message_at')
+            ->selectRaw('(select messages.body from messages where messages.conversation_id = conversations.id order by messages.id desc limit 1) as last_message_body')
+            ->selectRaw('coalesce(
+                (select pokemon.sprite_url from favorites inner join pokemon on pokemon.number = favorites.pokemon_number where favorites.user_id = users.id order by favorites.created_at desc limit 1),
+                (select pokemon.sprite_url from pokemon where pokemon.number = users.id limit 1)
+            ) as avatar_url')
             ->selectRaw(
                 '(select count(*) from messages where messages.conversation_id = conversations.id and messages.sender_id != ? and messages.read_at is null) as unread_count',
                 [$authUserId]
@@ -70,52 +68,73 @@ new class extends Component
     }
 }; ?>
 
-<div class="flex flex-col h-full">
-    <div class="p-3 border-b border-gray-200">
-        <x-text-input
-            wire:model.live.debounce.300ms="search"
-            type="text"
-            class="w-full text-sm"
-            placeholder="Filtrar por nome..."
-        />
-    </div>
+<div class="chat-directory-inner">
+    <h2 class="sr-only">Conversas</h2>
 
-    <div class="flex-1 overflow-y-auto divide-y divide-gray-100">
+    <div class="chat-user-list">
         @forelse ($users as $user)
             <button
                 type="button"
                 wire:click="$dispatch('conversation-selected', { userId: {{ $user->id }} })"
                 wire:key="chat-user-{{ $user->id }}"
-                class="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 {{ $selectedUserId === $user->id ? 'bg-indigo-50' : '' }}"
+                class="chat-user-row {{ $selectedUserId === $user->id ? 'is-selected' : '' }}"
+                @if ($selectedUserId === $user->id) aria-current="true" @endif
             >
-                <span class="relative shrink-0">
-                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 text-xs font-medium">
-                        {{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}
-                    </span>
-                    <span
+                <span class="chat-user-avatar" aria-hidden="true">
+                    @if ($user->avatar_url)
+                        <img src="{{ $user->avatar_url }}" alt="" />
+                    @else
+                        <span>{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
+                    @endif
+                    <i
                         x-data
-                        :class="$store.presence?.onlineIds?.has({{ $user->id }}) ? 'bg-green-500' : 'bg-gray-300'"
-                        class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white"
-                    ></span>
+                        :class="$store.presence?.onlineIds?.has({{ $user->id }}) ? 'is-online' : ''"
+                        class="chat-presence-dot"
+                    ></i>
                 </span>
 
-                <span class="flex-1 min-w-0">
-                    <span class="block text-sm font-medium text-gray-900 truncate">{{ $user->name }}</span>
+                <span class="chat-user-copy">
+                    <strong>{{ $user->name }}</strong>
+                    <small>{{ $user->last_message_body ?: 'Comece uma nova conversa' }}</small>
                 </span>
 
-                @if ($user->unread_count > 0)
-                    <x-badge color="indigo">
-                        {{ $user->unread_count > config('chat.unread_badge_cap') ? config('chat.unread_badge_cap').'+' : $user->unread_count }}
-                    </x-badge>
-                @endif
+                <span class="chat-user-meta">
+                    @if ($user->last_message_at)
+                        <time datetime="{{ $user->last_message_at }}">
+                            {{ \Illuminate\Support\Carbon::parse($user->last_message_at)->isToday()
+                                ? \Illuminate\Support\Carbon::parse($user->last_message_at)->format('H:i')
+                                : \Illuminate\Support\Carbon::parse($user->last_message_at)->diffForHumans(short: true) }}
+                        </time>
+                    @endif
+
+                    @if ($user->unread_count > 0)
+                        <span class="chat-unread-badge" aria-label="{{ $user->unread_count }} mensagens não lidas">
+                            {{ $user->unread_count > config('chat.unread_badge_cap') ? config('chat.unread_badge_cap').'+' : $user->unread_count }}
+                        </span>
+                    @else
+                        <i
+                            x-data
+                            :class="$store.presence?.onlineIds?.has({{ $user->id }}) ? 'is-online' : ''"
+                            class="chat-user-status"
+                            aria-hidden="true"
+                        ></i>
+                    @endif
+                </span>
             </button>
         @empty
-            <p class="p-4 text-sm text-gray-500">Nenhum usuário encontrado.</p>
+            <div class="chat-user-empty">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="10.5" cy="10.5" r="6.5" />
+                    <path stroke-linecap="round" d="m20 20-4.5-4.5" />
+                </svg>
+                <p>Nenhum treinador disponível.</p>
+                <span>Novos treinadores aparecerão aqui.</span>
+            </div>
         @endforelse
     </div>
 
     @if ($users->hasPages())
-        <div class="p-2 border-t border-gray-200">
+        <div class="chat-directory-pagination">
             {{ $users->links() }}
         </div>
     @endif

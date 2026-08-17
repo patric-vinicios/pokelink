@@ -2,12 +2,11 @@
 
 /*
 |--------------------------------------------------------------------------
-| F10 — Removal confirmation
+| F10 — Immediate favorite removal
 |--------------------------------------------------------------------------
 |
-| Covers the confirm-gated toggle instance rendered on /favoritos: the star
-| opens a modal instead of mutating anything, and only the modal's own
-| confirm action (toggle()) actually removes the row.
+| Covers the immediate toggle rendered on /favoritos: clicking the filled
+| heart deletes the row without opening a modal and refreshes the grid.
 |
 */
 
@@ -16,29 +15,7 @@ use App\Models\Pokemon;
 use App\Models\User;
 use Livewire\Volt\Volt;
 
-test('removing asks for confirmation before writing any change', function () {
-    $user = User::factory()->create();
-    $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
-
-    $this->actingAs($user);
-
-    $favorite = Favorite::factory()->for($user)->create(['pokemon_number' => $pokemon->number]);
-
-    Volt::test('pokemon.favorite-toggle', [
-        'number' => $pokemon->number,
-        'name' => $pokemon->name,
-        'favorited' => true,
-        'variant' => 'icon',
-        'confirmRemoval' => true,
-    ])
-        ->call('requestRemoval')
-        ->assertDispatched('open-modal', "remove-favorite-{$pokemon->number}")
-        ->assertNotDispatched('toast');
-
-    expect(Favorite::query()->whereKey($favorite->id)->exists())->toBeTrue();
-});
-
-test('confirming removal deletes the row and dispatches the removal event', function () {
+test('clicking a filled heart removes the favorite immediately without opening a modal', function () {
     $user = User::factory()->create();
     $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
 
@@ -51,14 +28,29 @@ test('confirming removal deletes the row and dispatches the removal event', func
         'name' => $pokemon->name,
         'favorited' => true,
         'variant' => 'icon',
-        'confirmRemoval' => true,
     ])
         ->call('toggle')
         ->assertSet('favorited', false)
         ->assertDispatched('favorite-removed')
-        ->assertDispatched('close-modal', "remove-favorite-{$pokemon->number}");
+        ->assertDispatched('toast', message: 'Removido dos favoritos.', type: 'success')
+        ->assertNotDispatched('open-modal');
 
     expect(Favorite::query()->where('user_id', $user->id)->where('pokemon_number', $pokemon->number)->exists())->toBeFalse();
+});
+
+test('the favorites page renders an immediate toggle without confirmation markup', function () {
+    $user = User::factory()->create();
+    $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
+
+    $this->actingAs($user);
+
+    Favorite::factory()->for($user)->create(['pokemon_number' => $pokemon->number]);
+
+    $response = $this->get('/favoritos');
+
+    $response->assertOk()
+        ->assertSee('wire:click.stop="toggle"', false)
+        ->assertDontSee("Remover {$pokemon->name} dos favoritos?");
 });
 
 test('removing the only item on a page redirects to the last valid page', function () {
@@ -80,28 +72,10 @@ test('removing the only item on a page redirects to the last valid page', functi
     $component = Volt::test('pages.pokemon.favorites')->call('gotoPage', 2);
     $component->assertSet('paginators.page', 2);
 
-    // Simulates the confirm-gated toggle's own successful removal, followed
-    // by the favorite-removed event it dispatches on success.
+    // Simulates the immediate toggle's successful removal, followed by the
+    // favorite-removed event it dispatches on success.
     $favorites->first()->delete();
     $component->dispatch('favorite-removed');
 
     $component->assertSet('paginators.page', 1);
-});
-
-test('canceling the confirmation does not change the state', function () {
-    $user = User::factory()->create();
-    $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
-
-    $this->actingAs($user);
-
-    $favorite = Favorite::factory()->for($user)->create(['pokemon_number' => $pokemon->number]);
-
-    Volt::test('pokemon.favorite-toggle', [
-        'number' => $pokemon->number,
-        'name' => $pokemon->name,
-        'favorited' => true,
-        'confirmRemoval' => true,
-    ])->call('requestRemoval');
-
-    expect(Favorite::query()->whereKey($favorite->id)->exists())->toBeTrue();
 });

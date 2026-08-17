@@ -60,11 +60,6 @@ new #[Layout('layouts.app')] class extends Component
 
         $results = $query()->paginate(config('pokemon.search.per_page'));
 
-        // A page requested beyond the last valid one (stale bookmark, direct
-        // URL edit) clamps to the last valid page instead of rendering an
-        // empty grid — repaginating is the only way to fetch that page's
-        // rows, since the first paginate() call already fetched the wrong
-        // page's (empty) items.
         if ($results->lastPage() >= 1 && $results->currentPage() > $results->lastPage()) {
             $this->setPage($results->lastPage());
 
@@ -78,6 +73,18 @@ new #[Layout('layouts.app')] class extends Component
     public function types()
     {
         return Type::query()->orderBy('label_pt')->get();
+    }
+
+    #[Computed]
+    public function catalogCount(): int
+    {
+        return Pokemon::query()->count();
+    }
+
+    #[Computed]
+    public function favoriteCount(): int
+    {
+        return Favorite::query()->where('user_id', auth()->id())->count();
     }
 
     #[Computed]
@@ -101,79 +108,129 @@ new #[Layout('layouts.app')] class extends Component
     }
 }; ?>
 
-<div>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Início
-        </h2>
+<x-pokedex.hero
+    eyebrow="Bem-vindo(a) à sua Pokédex"
+    title="Explore sua"
+    highlight="Pokédex"
+    stats-label="Resumo do catálogo"
+>
+    <x-slot name="copy">
+        Descubra, conheça e colecione todos<br class="hidden sm:block">
+        os Pokémon do mundo!
     </x-slot>
 
-    <div class="space-y-6">
-        <x-card>
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div class="flex-1">
-                    <x-input-label for="search" value="Buscar por nome" />
-                    <x-text-input
+    <x-slot name="stats">
+        <x-pokedex.stat
+            tone="red"
+            :value="number_format($this->catalogCount, 0, ',', '.')"
+            label="Pokémon encontrados"
+        >
+            <x-slot name="icon">
+                <span class="mini-pokeball mini-pokeball--white"></span>
+            </x-slot>
+        </x-pokedex.stat>
+
+        <x-pokedex.stat
+            tone="blue"
+            :value="$this->types->count()"
+            label="Tipos de Pokémon"
+        >
+            <x-slot name="icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="4" y="4" width="6" height="6" rx="1" />
+                    <rect x="14" y="4" width="6" height="6" rx="1" />
+                    <rect x="4" y="14" width="6" height="6" rx="1" />
+                    <rect x="14" y="14" width="6" height="6" rx="1" />
+                </svg>
+            </x-slot>
+        </x-pokedex.stat>
+
+        <x-pokedex.stat
+            tone="gold"
+            :value="$this->favoriteCount"
+            label="Favoritos marcados"
+        >
+            <x-slot name="icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z" />
+                </svg>
+            </x-slot>
+        </x-pokedex.stat>
+
+        <x-pokedex.stat
+            tone="purple"
+            :value="config('pokemon.search.per_page')"
+            label="Pokémon por página"
+        >
+            <x-slot name="icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" />
+                    <circle cx="12" cy="10" r="2" />
+                </svg>
+            </x-slot>
+        </x-pokedex.stat>
+    </x-slot>
+
+        <section class="catalog-filters" aria-label="Filtros do catálogo">
+            <div class="catalog-search-field">
+                <label for="search">Buscar por nome</label>
+                <div class="catalog-input-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="11" cy="11" r="6" />
+                        <path d="m16 16 4 4" />
+                    </svg>
+                    <input
                         wire:model.live.debounce.300ms="search"
                         id="search"
-                        type="text"
-                        class="block mt-1 w-full"
-                        placeholder="Ex.: char"
+                        type="search"
+                        placeholder="Ex.: pikachu, eevee, mew..."
+                        autocomplete="off"
                         autofocus
                     />
                 </div>
-
-                <div class="sm:w-56">
-                    <x-input-label for="type" value="Tipo" />
-                    <select
-                        wire:model.live="type"
-                        id="type"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    >
-                        <option value="">Todos os tipos</option>
-                        @foreach ($this->types as $option)
-                            <option value="{{ $option->label_pt }}">{{ ucfirst($option->label_pt) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                @if ($this->hasActiveFilters)
-                    <div>
-                        <x-secondary-button wire:click="clearFilters">
-                            Limpar filtros
-                        </x-secondary-button>
-                    </div>
-                @endif
             </div>
-        </x-card>
+
+            <x-pokedex.type-filter
+                :types="$this->types"
+                :selected="$this->type"
+            >
+                <x-slot name="action">
+                    @if ($this->hasActiveFilters)
+                        <button type="button" wire:click="clearFilters">Limpar filtros</button>
+                    @endif
+                </x-slot>
+            </x-pokedex.type-filter>
+        </section>
 
         @if ($this->catalogEmpty)
-            <x-card wire:poll.5s>
+            <section class="catalog-state-card" wire:poll.5s>
                 <x-empty-state message="Catálogo sincronizando... isso leva menos de um minuto.">
                     <x-slot name="icon">
-                        <svg class="h-10 w-10 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
+                        <span class="catalog-sync-ball" aria-hidden="true"></span>
                     </x-slot>
                 </x-empty-state>
-            </x-card>
+            </section>
         @elseif ($this->results->isEmpty())
-            <x-card>
+            <section class="catalog-state-card">
                 <x-empty-state :message="$this->noMatchMessage">
                     <x-slot name="action">
-                        <x-secondary-button wire:click="clearFilters">
+                        <button type="button" class="catalog-clear-button" wire:click="clearFilters">
                             Limpar filtros
-                        </x-secondary-button>
+                        </button>
                     </x-slot>
                 </x-empty-state>
-            </x-card>
+            </section>
         @else
-            <div>
-                <p class="mb-4 text-sm text-gray-600">{{ $this->results->total() }} Pokémon encontrados</p>
+            <section class="catalog-results">
+                <header class="catalog-results-toolbar">
+                    <p>
+                        <span class="mini-pokeball" aria-hidden="true"></span>
+                        <strong>{{ number_format($this->results->total(), 0, ',', '.') }} Pokémon encontrados</strong>
+                    </p>
+                </header>
 
                 <div wire:loading>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div class="pokemon-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         @for ($i = 0; $i < 20; $i++)
                             <x-pokemon-card-skeleton wire:key="skeleton-{{ $i }}" />
                         @endfor
@@ -181,7 +238,7 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 <div wire:loading.remove>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div class="pokemon-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         @foreach ($this->results as $pokemon)
                             <x-pokemon-card
                                 wire:key="pokemon-{{ $pokemon->number }}"
@@ -190,9 +247,6 @@ new #[Layout('layouts.app')] class extends Component
                                 :name="$pokemon->name"
                                 :types="$pokemon->types"
                                 :sprite="$pokemon->sprite_url"
-                                :search="$this->search"
-                                :type="$this->type"
-                                :page="$this->results->currentPage()"
                             >
                                 <x-slot name="favorite">
                                     <livewire:pokemon.favorite-toggle
@@ -200,7 +254,6 @@ new #[Layout('layouts.app')] class extends Component
                                         :name="$pokemon->name"
                                         :favorited="(bool) $pokemon->favorited"
                                         variant="icon"
-                                        :confirm-removal="false"
                                         :key="'favorite-toggle-'.$pokemon->number"
                                     />
                                 </x-slot>
@@ -208,11 +261,10 @@ new #[Layout('layouts.app')] class extends Component
                         @endforeach
                     </div>
 
-                    <div class="mt-6">
+                    <div class="catalog-pagination">
                         {{ $this->results->links() }}
                     </div>
                 </div>
-            </div>
+            </section>
         @endif
-    </div>
-</div>
+</x-pokedex.hero>

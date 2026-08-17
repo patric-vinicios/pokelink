@@ -13,6 +13,7 @@
 
 use App\Models\Favorite;
 use App\Models\Pokemon;
+use App\Models\Type;
 use App\Models\User;
 use Livewire\Volt\Volt;
 
@@ -75,6 +76,128 @@ describe('usuário autenticado', function () {
             ->set('search', 'char')
             ->assertSee('charizard')
             ->assertDontSee('squirtle');
+    });
+
+    test('the type filter restricts the collection and renders the shared official icons', function () {
+        $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
+        $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
+
+        $charizard = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
+        $squirtle = Pokemon::factory()->create(['number' => 7, 'name' => 'squirtle', 'slug' => 'squirtle']);
+        $charizard->types()->attach($fire);
+        $squirtle->types()->attach($water);
+
+        Favorite::factory()->for($this->user)->create(['pokemon_number' => $charizard->number]);
+        Favorite::factory()->for($this->user)->create(['pokemon_number' => $squirtle->number]);
+
+        Volt::test('pages.pokemon.favorites')
+            ->assertSee('images/icons/types/glyphs/fire.svg', false)
+            ->assertSee('images/icons/types/glyphs/water.svg', false)
+            ->set('type', 'fogo')
+            ->assertSee('charizard')
+            ->assertDontSee('squirtle');
+    });
+
+    test('clearing after several filter changes restores the complete collection in one action', function () {
+        $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
+        $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
+
+        $charmander = Pokemon::factory()->create(['number' => 4, 'name' => 'charmander', 'slug' => 'charmander']);
+        $squirtle = Pokemon::factory()->create(['number' => 7, 'name' => 'squirtle', 'slug' => 'squirtle']);
+        $charmander->types()->attach($fire);
+        $squirtle->types()->attach($water);
+
+        Favorite::factory()->for($this->user)->create(['pokemon_number' => $charmander->number]);
+        Favorite::factory()->for($this->user)->create(['pokemon_number' => $squirtle->number]);
+
+        Volt::test('pages.pokemon.favorites')
+            ->set('type', 'fogo')
+            ->set('type', 'água')
+            ->set('search', 'squirtle')
+            ->set('sort', 'name')
+            ->call('clearFilters')
+            ->assertSet('type', '')
+            ->assertSet('search', '')
+            ->assertSet('sort', 'recent')
+            ->assertSee('charmander')
+            ->assertSee('squirtle');
+    });
+
+    test('the visible clear-filter controls navigate to the unfiltered canonical page', function () {
+        $bulbasaur = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
+        Favorite::factory()->for($this->user)->create(['pokemon_number' => $bulbasaur->number]);
+
+        Volt::test('pages.pokemon.favorites')
+            ->set('search', 'xyz')
+            ->assertSeeHtml('href="'.route('favoritos').'"')
+            ->assertSeeHtml('wire:navigate');
+    });
+
+    test('the type filter offers only types present in the authenticated user favorites', function () {
+        $other = User::factory()->create();
+        $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
+        $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
+
+        $charmander = Pokemon::factory()->create(['number' => 4, 'name' => 'charmander', 'slug' => 'charmander']);
+        $squirtle = Pokemon::factory()->create(['number' => 7, 'name' => 'squirtle', 'slug' => 'squirtle']);
+        $charmander->types()->attach($fire);
+        $squirtle->types()->attach($water);
+
+        Favorite::factory()->for($this->user)->create(['pokemon_number' => $charmander->number]);
+        Favorite::factory()->for($other)->create(['pokemon_number' => $squirtle->number]);
+
+        Volt::test('pages.pokemon.favorites')
+            ->assertSee('images/icons/types/glyphs/fire.svg', false)
+            ->assertDontSee('images/icons/types/glyphs/water.svg', false);
+    });
+
+    test('removing the last favorite of the selected type returns to the available collection', function () {
+        $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
+        $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
+
+        $charmander = Pokemon::factory()->create(['number' => 4, 'name' => 'charmander', 'slug' => 'charmander']);
+        $squirtle = Pokemon::factory()->create(['number' => 7, 'name' => 'squirtle', 'slug' => 'squirtle']);
+        $charmander->types()->attach($fire);
+        $squirtle->types()->attach($water);
+
+        $fireFavorite = Favorite::factory()->for($this->user)->create(['pokemon_number' => $charmander->number]);
+        Favorite::factory()->for($this->user)->create(['pokemon_number' => $squirtle->number]);
+
+        $component = Volt::test('pages.pokemon.favorites')
+            ->set('type', 'fogo')
+            ->assertSee('charmander')
+            ->assertDontSee('squirtle');
+
+        $fireFavorite->delete();
+
+        $component
+            ->dispatch('favorite-removed')
+            ->assertSet('type', '')
+            ->assertSee('squirtle')
+            ->assertDontSee('Nenhum Pokémon favorito encontrado para o tipo selecionado.');
+    });
+
+    test('the favorites hero shows the collection summary and latest national number', function () {
+        $older = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
+        $latest = Pokemon::factory()->create(['number' => 25, 'name' => 'pikachu', 'slug' => 'pikachu']);
+
+        Favorite::factory()->for($this->user)->create([
+            'pokemon_number' => $older->number,
+            'created_at' => now()->subDay(),
+        ]);
+        Favorite::factory()->for($this->user)->create([
+            'pokemon_number' => $latest->number,
+            'created_at' => now(),
+        ]);
+
+        $this->get('/favoritos')
+            ->assertOk()
+            ->assertSee('Seus Pokémon')
+            ->assertSee('favoritos')
+            ->assertSee('Monte sua seleção preferida e acesse rapidamente')
+            ->assertSee('Tipos diferentes')
+            ->assertSee('#0025')
+            ->assertSee('Último adicionado');
     });
 
     test('the name sort control reorders the list alphabetically', function () {

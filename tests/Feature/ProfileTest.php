@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Pokemon;
+use App\Models\Type;
 use App\Models\User;
 use App\Policies\UpdateProfilePolicy;
 use Illuminate\Support\Facades\Hash;
@@ -15,11 +17,43 @@ test('the profile page shows name, email, and account creation date', function (
 
     $this->get('/perfil')
         ->assertOk()
+        ->assertSeeVolt('profile.trainer-dashboard')
         ->assertSeeVolt('profile.update-profile-information-form')
         ->assertSeeVolt('profile.update-password-form')
+        ->assertSee('Seu perfil de')
+        ->assertSee('treinador')
+        ->assertSee('Gerencie suas informações, insígnias e equipe favorita')
         ->assertSee('Ash Ketchum')
         ->assertSee('ash@pokelink.test')
         ->assertSee($user->created_at->format('d/m/Y'));
+});
+
+test('the trainer dashboard presents real favorite pokemon and type data', function () {
+    $user = User::factory()->create();
+    $electric = Type::factory()->create([
+        'slug' => 'electric',
+        'label_pt' => 'elétrico',
+    ]);
+    $pikachu = Pokemon::factory()->create([
+        'number' => 25,
+        'name' => 'pikachu',
+        'slug' => 'pikachu',
+        'sprite_url' => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
+    ]);
+
+    $pikachu->types()->attach($electric);
+    $user->favorites()->attach($pikachu);
+
+    $this->actingAs($user);
+
+    $this->get('/perfil')
+        ->assertOk()
+        ->assertSee('Pikachu')
+        ->assertSee('#0025')
+        ->assertSee('Elétrico')
+        ->assertSee($pikachu->sprite_url, false)
+        ->assertSee('1 Pokémon favorito')
+        ->assertSee('1 tipo diferente');
 });
 
 test('the email is displayed as read-only', function () {
@@ -27,12 +61,25 @@ test('the email is displayed as read-only', function () {
 
     $this->actingAs($user);
 
-    $component = Volt::test('profile.update-profile-information-form');
-
-    $component
+    $this->get('/perfil')
+        ->assertOk()
+        ->assertDontSee('autofocus', false)
         ->assertDontSee('wire:model="email"', false)
-        ->assertSee('ash@pokelink.test')
-        ->assertSee('O e-mail não pode ser alterado.');
+        ->assertSee('ash@pokelink.test');
+});
+
+test('account editing is rendered inside the personal information card', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get('/perfil')
+        ->assertOk()
+        ->assertSee('profile-inline-editor', false)
+        ->assertSee('Nome do treinador')
+        ->assertSee('Senha de acesso')
+        ->assertSee('name="name"', false)
+        ->assertSee('name="current_password"', false)
+        ->assertDontSee('profile-edit-toggle', false)
+        ->assertDontSee('Gerencie sua conta');
 });
 
 test('the navigation bar is wired to the profile-updated event from the profile form', function () {

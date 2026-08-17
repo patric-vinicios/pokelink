@@ -26,9 +26,9 @@ Volt::route('/', 'pages.pokemon.search')
     ->middleware(['auth', 'auth.session'])
     ->name('dashboard');
 
-// Real detail page (F09): local-catalog-first resolution with a lazily
-// loaded PokeAPI detail panel. Click-through target for F08's result cards.
-Volt::route('/pokemon/{slug}', 'pages.pokemon.show')
+// Backward-compatible deep links return to the catalog and open the same
+// modal used by card interactions; no standalone detail screen is rendered.
+Route::get('/pokemon/{slug}', fn (string $slug) => redirect()->route('dashboard', ['pokemon' => $slug]))
     ->middleware(['auth', 'auth.session'])
     ->name('pokemon.show');
 

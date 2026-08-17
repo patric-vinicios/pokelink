@@ -1,11 +1,13 @@
-<div {{ $attributes->merge(['class' => 'animate-pulse rounded-lg bg-white p-4 shadow-sm']) }}>
-    <div class="mx-auto aspect-square w-full max-w-[7rem] rounded-md bg-gray-200"></div>
+<div {{ $attributes->merge(['class' => 'pokemon-card pokemon-card-skeleton animate-pulse']) }} aria-hidden="true">
+    <span class="pokemon-card-skeleton-number"></span>
+    <span class="pokemon-card-skeleton-favorite"></span>
+    <span class="pokemon-card-skeleton-art"></span>
 
-    <div class="mx-auto mt-3 h-3 w-10 rounded bg-gray-200"></div>
-    <div class="mx-auto mt-2 h-4 w-20 rounded bg-gray-200"></div>
-
-    <div class="mt-3 flex justify-center gap-1">
-        <div class="h-5 w-12 rounded-full bg-gray-200"></div>
-        <div class="h-5 w-12 rounded-full bg-gray-200"></div>
+    <div class="pokemon-card-skeleton-copy">
+        <span class="pokemon-card-skeleton-name"></span>
+        <div class="pokemon-card-skeleton-types">
+            <span></span>
+            <span></span>
+        </div>
     </div>
 </div>

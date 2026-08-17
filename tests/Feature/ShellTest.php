@@ -23,6 +23,23 @@ test('the navigation bar shows the four destinations', function () {
         ->assertSee('Meu Perfil');
 });
 
+test('every authenticated destination uses the same application shell', function (string $path) {
+    $html = $this->actingAs(User::factory()->create())
+        ->get($path)
+        ->assertOk()
+        ->getContent();
+
+    expect(substr_count($html, 'class="pokelink-sidebar"'))->toBe(1)
+        ->and(substr_count($html, 'class="pokelink-topbar"'))->toBe(1)
+        ->and(substr_count($html, 'class="pokelink-stage"'))->toBe(1)
+        ->and($html)->not->toContain('pokelink-stage--catalog');
+})->with([
+    'Início' => '/',
+    'Favoritos' => '/favoritos',
+    'Chat' => '/chat',
+    'Meu Perfil' => '/perfil',
+]);
+
 test('"Início" is highlighted on the home page', function () {
     $html = $this->actingAs(User::factory()->create())
         ->get('/')
