@@ -1,0 +1,21 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No app image needed here — composer.lock is all `audit` reads. Same
+      # disposable composer:2 container gates/security.sh uses locally,
+      # since the app image doesn't ship a composer binary.
+      - run: docker run --rm -v ${{ github.workspace }}:/app -w /app composer:2 audit
