@@ -113,8 +113,13 @@ test('limpar filtros reseta busca, tipo e página em um único round-trip', func
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     Pokemon::factory()
         ->count(25)
-        ->sequence(fn ($sequence) => ['number' => $sequence->index + 1])
-        ->create();
+        ->sequence(fn ($sequence) => [
+            'number' => $sequence->index + 1,
+            'name' => 'lava-'.$sequence->index,
+            'slug' => 'lava-'.$sequence->index,
+        ])
+        ->create()
+        ->each(fn (Pokemon $pokemon) => $pokemon->types()->attach($fire->id));
 
     $component = Volt::test('pages.pokemon.search')
         ->set('search', 'a')

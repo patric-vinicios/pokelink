@@ -37,7 +37,7 @@ new #[Layout('layouts.app')] class extends Component
     #[Computed]
     public function results()
     {
-        return Pokemon::query()
+        $query = fn () => Pokemon::query()
             ->with('types')
             ->when($this->search !== '', fn ($query) => $query->where(
                 'name',
@@ -48,8 +48,22 @@ new #[Layout('layouts.app')] class extends Component
                 'types',
                 fn ($typeQuery) => $typeQuery->where('label_pt', $this->type)
             ))
-            ->orderBy('number')
-            ->paginate(config('pokemon.search.per_page'));
+            ->orderBy('number');
+
+        $results = $query()->paginate(config('pokemon.search.per_page'));
+
+        // A page requested beyond the last valid one (stale bookmark, direct
+        // URL edit) clamps to the last valid page instead of rendering an
+        // empty grid — repaginating is the only way to fetch that page's
+        // rows, since the first paginate() call already fetched the wrong
+        // page's (empty) items.
+        if ($results->lastPage() >= 1 && $results->currentPage() > $results->lastPage()) {
+            $this->setPage($results->lastPage());
+
+            $results = $query()->paginate(config('pokemon.search.per_page'));
+        }
+
+        return $results;
     }
 
     #[Computed]
@@ -150,32 +164,34 @@ new #[Layout('layouts.app')] class extends Component
             <div>
                 <p class="mb-4 text-sm text-gray-600">{{ $this->results->total() }} Pokémon encontrados</p>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    @foreach ($this->results as $pokemon)
-                        <x-card padding="p-4" wire:key="pokemon-{{ $pokemon->number }}">
-                            <img
-                                src="{{ $pokemon->sprite_url }}"
-                                alt="{{ $pokemon->name }}"
-                                loading="lazy"
-                                class="mx-auto h-24 w-24 object-contain"
-                            />
-                            <p class="mt-2 text-center text-xs text-gray-500">
-                                #{{ str_pad((string) $pokemon->number, 4, '0', STR_PAD_LEFT) }}
-                            </p>
-                            <p class="text-center font-medium capitalize text-gray-900">
-                                {{ $pokemon->name }}
-                            </p>
-                            <div class="mt-2 flex flex-wrap justify-center gap-1">
-                                @foreach ($pokemon->types as $pokemonType)
-                                    <x-badge>{{ ucfirst($pokemonType->label_pt) }}</x-badge>
-                                @endforeach
-                            </div>
-                        </x-card>
-                    @endforeach
+                <div wire:loading>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        @for ($i = 0; $i < 20; $i++)
+                            <x-pokemon-card-skeleton wire:key="skeleton-{{ $i }}" />
+                        @endfor
+                    </div>
                 </div>
 
-                <div class="mt-6">
-                    {{ $this->results->links() }}
+                <div wire:loading.remove>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        @foreach ($this->results as $pokemon)
+                            <x-pokemon-card
+                                wire:key="pokemon-{{ $pokemon->number }}"
+                                :number="$pokemon->number"
+                                :slug="$pokemon->slug"
+                                :name="$pokemon->name"
+                                :types="$pokemon->types"
+                                :sprite="$pokemon->sprite_url"
+                                :search="$this->search"
+                                :type="$this->type"
+                                :page="$this->results->currentPage()"
+                            />
+                        @endforeach
+                    </div>
+
+                    <div class="mt-6">
+                        {{ $this->results->links() }}
+                    </div>
                 </div>
             </div>
         @endif

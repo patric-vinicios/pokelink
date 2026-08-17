@@ -40,6 +40,41 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Type badge colors
+    |--------------------------------------------------------------------------
+    |
+    | Maps each of the 18 type slugs above to one of the 8 colors
+    | resources/views/components/badge.blade.php (F04) already supports.
+    | <x-badge> is a shared primitive other features also use, so this stays
+    | a domain-specific map here rather than growing badge's own color list
+    | (F08). Some thematically distant types intentionally share a color —
+    | pedra, sombrio, aço, and normal all render gray.
+    |
+    */
+
+    'type_colors' => [
+        'normal' => 'gray',
+        'fire' => 'red',
+        'water' => 'blue',
+        'electric' => 'yellow',
+        'grass' => 'green',
+        'ice' => 'blue',
+        'fighting' => 'red',
+        'poison' => 'purple',
+        'ground' => 'yellow',
+        'flying' => 'indigo',
+        'psychic' => 'pink',
+        'bug' => 'green',
+        'rock' => 'gray',
+        'ghost' => 'purple',
+        'dragon' => 'indigo',
+        'dark' => 'gray',
+        'steel' => 'gray',
+        'fairy' => 'pink',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sync job tuning
     |--------------------------------------------------------------------------
     */
