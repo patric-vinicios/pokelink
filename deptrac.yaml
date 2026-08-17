@@ -49,8 +49,13 @@ deptrac:
             - Models
         Http:
             - Models
+        # RegisterForm deliberately delegates to StoreUserRequest::rules()
+        # so the FormRequest stays the single source of truth for
+        # validation, even though it's never routed to (see the docblock on
+        # RegisterForm::rules()).
         LivewireSupport:
             - Models
+            - Http
         # Only Jobs (the catalog sync) may call the PokeAPI client — mirrors
         # the "only code allowed to reach the network" rule in AGENTS.md.
         Jobs:
