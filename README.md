@@ -86,6 +86,13 @@ docker compose down                 # para tudo, preserva o banco
 docker compose down -v && docker compose up -d   # ambiente limpo, migrado e populado
 ```
 
+Os mesmos dois comandos de boot/derrubada acima existem como scripts idempotentes —
+`gates/init.sh` (cria o `.env` se faltar, sobe com `--wait` e imprime a mesma tabela de
+credenciais/endpoints deste README) e `gates/down.sh` (`down --volumes --remove-orphans` mais a
+remoção da imagem `pokelink-app`, para o próximo boot reconstruir do zero). Nenhum dos dois faz
+parte de `gates/all.sh`, que roda só as gates de qualidade (lint, análise estática, testes etc.),
+descritas no `CLAUDE.md`.
+
 ---
 
 ## Decisões técnicas
@@ -158,10 +165,14 @@ A suíte roda contra um SQLite em memória (configurado em `phpunit.xml`), uma e
 teste — a aplicação em si roda sobre MySQL. Nenhum teste acessa a rede (todo acesso ao PokeAPI é
 substituído por `Http::fake`).
 
-176 casos (617 assertions) em 25 arquivos, ~15s — cobrindo autenticação, registro, shell, busca
+189 casos (760 assertions) em 24 arquivos, ~15s — cobrindo autenticação, registro, shell, busca
 com cache, detalhes, favoritos (incluindo idempotência e autorização cross-user), perfil, chat
 (incluindo autorização de canal), sincronização do catálogo e o cliente PokeAPI (retry, timeout,
 circuito, rate limit).
+
+Além da suíte Pest, `gates/*.sh` roda uma segunda camada de verificação estática — Pint, Larastan,
+PHP Insights, Deptrac, PHPCPD e `composer audit` — descrita em detalhe no `CLAUDE.md`, e um punhado
+de specs Playwright de regressão visual em `tests/Browser/`.
 
 Para rodar um grupo específico:
 
@@ -202,31 +213,48 @@ cacheia a configuração. Rode `docker compose exec app php artisan optimize:cle
 
 ---
 
-## Entregue nesta etapa
+## Entregue
 
-- Stack completa de 6 serviços subindo com um comando, com healthchecks e ordenação entre serviços
-- Entrypoint com espera pelo banco, migrate/seed idempotente e mensagens de falha explícitas em pt-BR
-- Skeleton Laravel 12 + Breeze (stack Livewire) + Horizon + Reverb configurados e funcionando
-- `.env.example` completo, que sobe sem nenhuma edição manual
-- Seeder das duas contas documentadas, seguro para reexecução
-- Testes cobrindo o contrato de configuração, o seeder e o caminho feliz do boot
+Todas as 13 features do PRD (`docs/prd.md`) estão implementadas e cobertas por testes:
 
-## Fora do escopo desta etapa
+- **F01** Stack completa de 6 serviços subindo com um comando, com healthchecks, ordenação entre
+  serviços, entrypoint idempotente e mensagens de falha explícitas em pt-BR
+- **F02–F03** Autenticação (throttling, "lembrar-me", URL pretendida) e cadastro, com validação e
+  mensagens em pt-BR
+- **F04** Shell da aplicação, navegação e componentes de UI compartilhados (Tailwind)
+- **F05** Cliente PokeAPI resiliente: timeout, retry com backoff exponencial, rate limit, circuit
+  breaker e cache Redis de 24h
+- **F06** Sincronização do catálogo via job em fila, idempotente, visível no Horizon
+- **F07–F08** Busca ao vivo com debounce, filtro por tipo e listagem paginada
+- **F09** Detalhes do Pokémon — **implementado como modal** sobre a grade de resultados (não como
+  página roteada; veja a nota abaixo), incluindo cadeia de evolução, lista de golpes, experiência
+  base e um painel de fraquezas por tipo — itens que vão além do escopo original do PRD (registrado
+  em `docs/prd.md` §7)
+- **F10** Favoritos com toggle idempotente, página dedicada com busca/ordenação, e autorização
+  cross-user
+- **F11** Perfil (nome e troca de senha, com invalidação de outras sessões)
+- **F12** Chat em tempo real via Reverb, com presença, histórico paginado, contador de não lidas e
+  autorização por canal
+- **F13** Suíte Pest (189 casos, 760 assertions, 24 arquivos, ~15s) mais uma segunda camada de
+  gates de qualidade (`gates/*.sh`: Pint, Larastan, PHP Insights, Deptrac, PHPCPD, `composer audit`)
+  e specs Playwright de regressão visual em `tests/Browser/` — nenhuma dessas duas camadas extras
+  fazia parte do escopo original do PRD
 
-O que segue está especificado e pertence às features seguintes — nada disso está implementado aqui:
+**Nota sobre F09:** `/pokemon/{slug}` continua existindo como rota, mas apenas redireciona para
+`/?pokemon={slug}`, que reabre o mesmo modal usado pelos cards — não há mais uma página de detalhes
+dedicada. `docs/prd.md` foi atualizado para descrever esse comportamento.
 
-- **Comportamento de autenticação** (throttling, mensagens genéricas, URL pretendida, "lembrar-me") — F02
-- **Validação de cadastro** e mensagens em pt-BR — F03
-- **Shell da aplicação, navegação e componentes de UI** — F04. O layout que você vê é o padrão do
-  Breeze e será substituído.
-- **Cliente PokeAPI** com timeout, retry, rate limit e cache — F05
-- **Sincronização do catálogo** — F06. O `DatabaseSeeder` já carrega o ponto de extensão comentado
-  onde o job será despachado.
-- **Busca, listagem, detalhes e favoritos** — F07 a F10
-- **Perfil** — F11
-- **Chat em tempo real** — F12. Aqui só se prova que o transporte Reverb sobe e aceita conexão;
-  nenhum canal é definido ainda.
-- **Suíte completa de testes** — F13
+**Lacunas conhecidas** (não bloqueiam nenhum critério de aceite do PRD, mas vale registrar):
+- Os nomes dos testes Pest estão em inglês, não em frases pt-BR como o PRD F13 pede
+- Os critérios de tempo do chat (indicador de presença em até 5s, entrega de mensagem em até 1s)
+  não foram medidos de ponta a ponta com dois navegadores nesta validação — a arquitetura (Reverb +
+  broadcast síncrono) os suporta, mas não há medição ao vivo registrada
+
+## Fora do escopo do produto
+
+Ver a seção 7 do [PRD](docs/prd.md) para a lista completa (painel administrativo, recuperação de
+senha por e-mail, deploy em nuvem, i18n, etc.). Diferente de uma etapa anterior deste projeto, essa
+lista agora reflete decisões de escopo do produto, não trabalho ainda não iniciado.
 
 Também está fora do escopo do produto, por decisão de projeto: painel administrativo, recuperação de
 senha por e-mail, deploy em nuvem, CI/CD e internacionalização. Detalhes na seção 7 do
