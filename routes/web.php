@@ -27,10 +27,9 @@ Volt::route('/', 'pages.pokemon.search')
     ->middleware(['auth', 'auth.session'])
     ->name('dashboard');
 
-// Placeholder click-through target for F08's result cards, following the
-// same pattern as /favoritos and /chat below; F09 (wave 6) replaces this
-// with the real detail page.
-Route::view('/pokemon/{slug}', 'pokemon.show')
+// Real detail page (F09): local-catalog-first resolution with a lazily
+// loaded PokeAPI detail panel. Click-through target for F08's result cards.
+Volt::route('/pokemon/{slug}', 'pages.pokemon.show')
     ->middleware(['auth', 'auth.session'])
     ->name('pokemon.show');
 
