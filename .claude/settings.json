@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "laravel": {
+      "source": {
+        "source": "github",
+        "repo": "laravel/agent-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "laravel@laravel": true
+  }
+}

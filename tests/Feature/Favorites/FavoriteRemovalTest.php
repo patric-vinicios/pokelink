@@ -16,7 +16,7 @@ use App\Models\Pokemon;
 use App\Models\User;
 use Livewire\Volt\Volt;
 
-test('remover pede confirmacao antes de gravar qualquer alteracao', function () {
+test('removing asks for confirmation before writing any change', function () {
     $user = User::factory()->create();
     $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
 
@@ -38,7 +38,7 @@ test('remover pede confirmacao antes de gravar qualquer alteracao', function () 
     expect(Favorite::query()->whereKey($favorite->id)->exists())->toBeTrue();
 });
 
-test('confirmar a remocao apaga a linha e dispara o evento de remocao', function () {
+test('confirming removal deletes the row and dispatches the removal event', function () {
     $user = User::factory()->create();
     $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
 
@@ -61,7 +61,7 @@ test('confirmar a remocao apaga a linha e dispara o evento de remocao', function
     expect(Favorite::query()->where('user_id', $user->id)->where('pokemon_number', $pokemon->number)->exists())->toBeFalse();
 });
 
-test('remover o unico item de uma pagina redireciona para a ultima pagina valida', function () {
+test('removing the only item on a page redirects to the last valid page', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -88,7 +88,7 @@ test('remover o unico item de uma pagina redireciona para a ultima pagina valida
     $component->assertSet('paginators.page', 1);
 });
 
-test('cancelar a confirmacao nao altera o estado', function () {
+test('canceling the confirmation does not change the state', function () {
     $user = User::factory()->create();
     $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
 

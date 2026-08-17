@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Exceptions\PokeApiSyncException;
 use App\Jobs\SyncPokemonCatalog;
+use App\Jobs\SyncPokemonCatalogStats;
 use Illuminate\Console\Command;
 
 class SyncPokemonCommand extends Command
@@ -32,7 +33,7 @@ class SyncPokemonCommand extends Command
             // value and thrown exceptions alike. Calling handle() directly
             // keeps container-based parameter resolution (PokeApiClient) while
             // getting the actual SyncPokemonCatalogStats and exception back.
-            /** @var \App\Jobs\SyncPokemonCatalogStats $stats */
+            /** @var SyncPokemonCatalogStats $stats */
             $stats = app()->call([new SyncPokemonCatalog, 'handle']);
         } catch (PokeApiSyncException $e) {
             $this->error("Falha ao sincronizar o catálogo: PokeAPI indisponível (endpoint: {$e->endpoint}). Verifique os logs.");

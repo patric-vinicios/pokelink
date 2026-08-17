@@ -16,7 +16,7 @@ use App\Models\Pokemon;
 use App\Models\User;
 use Livewire\Volt\Volt;
 
-test('a pagina de favoritos exige autenticacao', function () {
+test('the favorites page requires authentication', function () {
     $this->get('/favoritos')->assertRedirect(route('login'));
 });
 
@@ -29,7 +29,7 @@ describe('usuário autenticado', function () {
         $this->actingAs($this->user);
     });
 
-    test('a pagina lista apenas os favoritos do usuario autenticado', function () {
+    test('the page lists only the authenticated user\'s favorites', function () {
         $other = User::factory()->create();
 
         $mine = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
@@ -43,7 +43,7 @@ describe('usuário autenticado', function () {
         $response->assertOk()->assertSee('bulbasaur')->assertDontSee('charmander');
     });
 
-    test('os favoritos aparecem em ordem do mais recente para o mais antigo por padrao', function () {
+    test('favorites appear from most to least recent by default', function () {
         $first = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
         $second = Pokemon::factory()->create(['number' => 4, 'name' => 'charmander', 'slug' => 'charmander']);
         $third = Pokemon::factory()->create(['number' => 7, 'name' => 'squirtle', 'slug' => 'squirtle']);
@@ -64,7 +64,7 @@ describe('usuário autenticado', function () {
             ->and($positions['charmander'])->toBeLessThan($positions['bulbasaur']);
     });
 
-    test('o filtro de texto busca apenas dentro da colecao do usuario', function () {
+    test('the text filter searches only within the user\'s own collection', function () {
         $charizard = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
         $squirtle = Pokemon::factory()->create(['number' => 7, 'name' => 'squirtle', 'slug' => 'squirtle']);
 
@@ -77,7 +77,7 @@ describe('usuário autenticado', function () {
             ->assertDontSee('squirtle');
     });
 
-    test('o controle de ordenacao por nome reordena a lista alfabeticamente', function () {
+    test('the name sort control reorders the list alphabetically', function () {
         $charizard = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
         $bulbasaur = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
 
@@ -89,7 +89,7 @@ describe('usuário autenticado', function () {
         expect(mb_strpos($html, 'bulbasaur'))->toBeLessThan(mb_strpos($html, 'charizard'));
     });
 
-    test('o controle de ordenacao por numero usa o numero nacional', function () {
+    test('the number sort control uses the national number', function () {
         $mewtwo = Pokemon::factory()->create(['number' => 150, 'name' => 'mewtwo', 'slug' => 'mewtwo']);
         $bulbasaur = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
 
@@ -101,7 +101,7 @@ describe('usuário autenticado', function () {
         expect(mb_strpos($html, 'bulbasaur'))->toBeLessThan(mb_strpos($html, 'mewtwo'));
     });
 
-    test('a colecao vazia mostra a mensagem dedicada com o link para buscar', function () {
+    test('an empty collection shows the dedicated message with the link to search', function () {
         $response = $this->get('/favoritos');
 
         $response->assertOk()
@@ -109,7 +109,7 @@ describe('usuário autenticado', function () {
             ->assertSee(route('dashboard'), false);
     });
 
-    test('um filtro sem correspondencia mostra o estado de nenhum resultado sem esvaziar a colecao', function () {
+    test('a filter with no match shows the no-results state without emptying the collection', function () {
         $bulbasaur = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
         Favorite::factory()->for($this->user)->create(['pokemon_number' => $bulbasaur->number]);
 
@@ -119,7 +119,7 @@ describe('usuário autenticado', function () {
             ->assertDontSee('Você ainda não favoritou nenhum Pokémon.');
     });
 
-    test('a pagina de favoritos reutiliza o mesmo componente de card dos resultados de busca', function () {
+    test('the favorites page reuses the same card component as the search results', function () {
         $bulbasaur = Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
         Favorite::factory()->for($this->user)->create(['pokemon_number' => $bulbasaur->number]);
 
@@ -131,7 +131,7 @@ describe('usuário autenticado', function () {
             ->assertSee('wire:key="favorite-pokemon-1"', false);
     });
 
-    test('a pagina pagina em 20 itens', function () {
+    test('the page paginates in batches of 20', function () {
         Pokemon::factory()
             ->count(45)
             ->sequence(fn ($sequence) => ['number' => $sequence->index + 1])

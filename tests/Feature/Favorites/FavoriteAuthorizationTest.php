@@ -17,7 +17,7 @@ use App\Models\User;
 use App\Policies\FavoritePolicy;
 use Livewire\Volt\Volt;
 
-test('um usuario nao consegue remover o favorito de outro usuario', function () {
+test('a user cannot remove another user\'s favorite', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
     $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
@@ -40,7 +40,7 @@ test('um usuario nao consegue remover o favorito de outro usuario', function () 
         ->and(Favorite::query()->count())->toBe(2);
 });
 
-test('a politica nega a exclusao de um favorito que nao pertence ao usuario autenticado', function () {
+test('the policy denies deleting a favorite that doesn\'t belong to the authenticated user', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
     $pokemon = Pokemon::factory()->create();
@@ -53,13 +53,13 @@ test('a politica nega a exclusao de um favorito que nao pertence ao usuario aute
         ->and($policy->delete($userB, $favoriteB))->toBeTrue();
 });
 
-test('um convidado que tenta favoritar e redirecionado para o login preservando a url pretendida', function () {
+test('a guest trying to favorite is redirected to login preserving the intended url', function () {
     $this->get('/favoritos')->assertRedirect(route('login'));
 
     expect(Favorite::query()->count())->toBe(0);
 });
 
-test('usuario a nunca ve os favoritos do usuario b na propria listagem', function () {
+test('user a never sees user b\'s favorites in their own listing', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
     $pokemon = Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);

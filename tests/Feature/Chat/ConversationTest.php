@@ -5,7 +5,7 @@ use App\Models\Message;
 use App\Models\User;
 use Livewire\Volt\Volt;
 
-test('abrir uma conversa inexistente não cria nenhuma linha', function () {
+test('opening a nonexistent conversation creates no row', function () {
     $me = User::factory()->create();
     $other = User::factory()->create();
 
@@ -15,7 +15,7 @@ test('abrir uma conversa inexistente não cria nenhuma linha', function () {
     expect(Conversation::count())->toBe(0);
 });
 
-test('enviar a primeira mensagem cria a conversa e a mensagem', function () {
+test('sending the first message creates the conversation and the message', function () {
     $me = User::factory()->create();
     $other = User::factory()->create();
 
@@ -34,7 +34,7 @@ test('enviar a primeira mensagem cria a conversa e a mensagem', function () {
         ->sender_id->toBe($me->id);
 });
 
-test('duas mensagens entre os mesmos usuários, em qualquer ordem, produzem uma única conversa', function () {
+test('two messages between the same users, in either order, produce a single conversation', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
 
@@ -48,7 +48,7 @@ test('duas mensagens entre os mesmos usuários, em qualquer ordem, produzem uma 
     expect(Message::count())->toBe(2);
 });
 
-test('o histórico carrega as 30 mensagens mais recentes em ordem cronológica', function () {
+test('the history loads the 30 most recent messages in chronological order', function () {
     $me = User::factory()->create();
     $other = User::factory()->create();
     $conversation = Conversation::betweenUsers($me, $other);
@@ -65,7 +65,7 @@ test('o histórico carrega as 30 mensagens mais recentes em ordem cronológica',
     expect($messages[29]['body'])->toBe('msg-45');
 });
 
-test('rolar até o topo carrega as 30 mensagens anteriores', function () {
+test('scrolling to the top loads the previous 30 messages', function () {
     $me = User::factory()->create();
     $other = User::factory()->create();
     $conversation = Conversation::betweenUsers($me, $other);
@@ -84,7 +84,7 @@ test('rolar até o topo carrega as 30 mensagens anteriores', function () {
     expect($messages[44]['body'])->toBe('msg-45');
 });
 
-test('abrir a conversa marca como lidas as mensagens do outro participante', function () {
+test('opening the conversation marks the other participant\'s messages as read', function () {
     $me = User::factory()->create();
     $other = User::factory()->create();
     $conversation = Conversation::betweenUsers($me, $other);
@@ -97,7 +97,7 @@ test('abrir a conversa marca como lidas as mensagens do outro participante', fun
     expect($conversation->messages()->where('sender_id', $me->id)->whereNull('read_at')->count())->toBe(1);
 });
 
-test('uma mensagem com mais de 2000 caracteres é rejeitada mesmo contornando o controle do cliente', function () {
+test('a message over 2000 characters is rejected even when bypassing the client-side control', function () {
     $me = User::factory()->create();
     $other = User::factory()->create();
 
@@ -109,7 +109,7 @@ test('uma mensagem com mais de 2000 caracteres é rejeitada mesmo contornando o 
     expect(Message::count())->toBe(0);
 });
 
-test('o corpo da mensagem com html é renderizado como texto literal', function () {
+test('a message body containing html is rendered as literal text', function () {
     $me = User::factory()->create();
     $other = User::factory()->create();
     $conversation = Conversation::betweenUsers($me, $other);
@@ -120,7 +120,7 @@ test('o corpo da mensagem com html é renderizado como texto literal', function 
         ->assertSee('<script>alert(1)</script>');
 });
 
-test('um usuário não pode carregar o histórico de uma conversa da qual não participa', function () {
+test('a user cannot load the history of a conversation they don\'t participate in', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
     $stranger = User::factory()->create();

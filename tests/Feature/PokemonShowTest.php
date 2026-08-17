@@ -19,7 +19,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Livewire\Volt\Volt;
 
-test('a página de detalhes exige autenticação', function () {
+test('the detail page requires authentication', function () {
     $this->get('/pokemon/charizard')->assertRedirect(route('login'));
 });
 
@@ -63,7 +63,7 @@ function fakeCharizardDetail(): void
     ]);
 }
 
-test('um pokemon local mostra o cabeçalho imediatamente sem esperar o fetch de detalhes', function () {
+test('a local pokemon shows the header immediately without waiting for the detail fetch', function () {
     $this->actingAs(User::factory()->create());
 
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
@@ -85,7 +85,7 @@ test('um pokemon local mostra o cabeçalho imediatamente sem esperar o fetch de 
     Http::assertNothingSent();
 });
 
-test('os detalhes carregam via wire init e preenchem habilidades stats altura e peso', function () {
+test('details load via wire init and fill in abilities, stats, height, and weight', function () {
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
     fakeCharizardDetail();
 
@@ -104,7 +104,7 @@ test('os detalhes carregam via wire init e preenchem habilidades stats altura e 
         ->assertSee('90,5 kg');
 });
 
-test('uma habilidade oculta e marcada com oculta', function () {
+test('a hidden ability is marked as hidden', function () {
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
     fakeCharizardDetail();
 
@@ -114,7 +114,7 @@ test('uma habilidade oculta e marcada com oculta', function () {
         ->assertSee('(oculta)');
 });
 
-test('as barras de status usam as 3 faixas de cor', function () {
+test('the stat bars use the 3 color bands', function () {
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
     fakeCharizardDetail();
 
@@ -128,7 +128,7 @@ test('as barras de status usam as 3 faixas de cor', function () {
         ->toContain('bg-green-500');
 });
 
-test('a segunda visita ao mesmo pokemon nao gera nova chamada upstream', function () {
+test('a second visit to the same pokemon does not trigger a new upstream call', function () {
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
     fakeCharizardDetail();
 
@@ -138,7 +138,7 @@ test('a segunda visita ao mesmo pokemon nao gera nova chamada upstream', functio
     Http::assertSentCount(2);
 });
 
-test('com o pokeapi indisponivel os dados locais permanecem e o botao tentar novamente funciona', function () {
+test('with pokeapi unavailable the local data remains and the try-again button works', function () {
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
 
     // loadDetail() exhausts 3 retries against /pokemon/6 (all 500) before
@@ -175,7 +175,7 @@ test('com o pokeapi indisponivel os dados locais permanecem e o botao tentar nov
         ->assertSee('Blaze');
 });
 
-test('um slug ausente localmente ainda tenta a busca upstream antes de concluir que nao existe', function () {
+test('a slug missing locally still attempts the upstream lookup before concluding it doesn\'t exist', function () {
     $this->actingAs(User::factory()->create());
 
     Http::fake([
@@ -200,7 +200,7 @@ test('um slug ausente localmente ainda tenta a busca upstream antes de concluir 
         ->assertSee('Blaze');
 });
 
-test('um slug inexistente local e upstream mostra a pagina pokemon nao encontrado', function () {
+test('a slug missing both locally and upstream shows the pokemon-not-found page', function () {
     $this->actingAs(User::factory()->create());
 
     Http::fake(['*' => Http::response(null, 404)]);
@@ -214,7 +214,7 @@ test('um slug inexistente local e upstream mostra a pagina pokemon nao encontrad
     expect(navLinkIsActive($response->getContent(), 'Início'))->toBeTrue();
 });
 
-test('um slug ausente localmente com upstream indisponivel mostra o aviso e nao a pagina de nao encontrado', function () {
+test('a slug missing locally with upstream unavailable shows the warning, not the not-found page', function () {
     $this->actingAs(User::factory()->create());
 
     Http::fake(['*' => Http::response(null, 500)]);
@@ -227,7 +227,7 @@ test('um slug ausente localmente com upstream indisponivel mostra o aviso e nao 
         ->assertSee('Tentar novamente');
 });
 
-test('um payload sem stats ou habilidades mostra informacao indisponivel para aquela secao', function () {
+test('a payload with no stats or abilities shows unavailable info for that section', function () {
     Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
 
     Http::fake([
@@ -252,7 +252,7 @@ test('um payload sem stats ou habilidades mostra informacao indisponivel para aq
         ->and(substr_count($html, 'Informação indisponível.'))->toBe(2);
 });
 
-test('voltar aos resultados reconstroi a pagina e os filtros de origem', function () {
+test('going back to results rebuilds the origin page and filters', function () {
     $this->actingAs(User::factory()->create());
 
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
@@ -265,7 +265,7 @@ test('voltar aos resultados reconstroi a pagina e os filtros de origem', functio
     $response->assertOk()->assertSee($expected);
 });
 
-test('chegar direto pela url sem contexto de origem leva de volta para o inicio', function () {
+test('arriving directly via url with no origin context leads back home', function () {
     $this->actingAs(User::factory()->create());
 
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
@@ -276,7 +276,7 @@ test('chegar direto pela url sem contexto de origem leva de volta para o inicio'
     $response->assertOk()->assertSee(route('dashboard'));
 });
 
-test('uma url de sprite quebrada renderiza o placeholder sem quebrar o layout', function () {
+test('a broken sprite url renders the placeholder without breaking the layout', function () {
     $this->actingAs(User::factory()->create());
 
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);
@@ -287,7 +287,7 @@ test('uma url de sprite quebrada renderiza o placeholder sem quebrar o layout', 
     $response->assertOk()->assertSee('x-on:error="broken = true"', false);
 });
 
-test('a pagina de detalhes mantem o inicio destacado na navegacao', function () {
+test('the detail page keeps "Início" highlighted in the navigation', function () {
     $this->actingAs(User::factory()->create());
 
     Pokemon::factory()->create(['number' => 6, 'name' => 'charizard', 'slug' => 'charizard']);

@@ -12,7 +12,7 @@ beforeEach(function () {
     resetPokeApiState();
 });
 
-test('o comando pokemon:sync imprime o resumo de criados e atualizados', function () {
+test('the pokemon:sync command prints the created/updated summary', function () {
     fakePokeApiCatalog(entries: [
         ['number' => 1, 'name' => 'bulbasaur'],
         ['number' => 4, 'name' => 'charmander'],
@@ -23,7 +23,7 @@ test('o comando pokemon:sync imprime o resumo de criados e atualizados', functio
     expect(Artisan::output())->toContain('2 Pokémon sincronizados (2 criados, 0 atualizados)');
 });
 
-test('rodar o comando pela segunda vez não cria duplicatas', function () {
+test('running the command a second time creates no duplicates', function () {
     fakePokeApiCatalog(entries: [
         ['number' => 1, 'name' => 'bulbasaur'],
         ['number' => 4, 'name' => 'charmander'],
@@ -38,7 +38,7 @@ test('rodar o comando pela segunda vez não cria duplicatas', function () {
     expect(Artisan::output())->toContain('2 Pokémon sincronizados (0 criados, 2 atualizados)');
 });
 
-test('o seeder despacha o job de sincronização na fila padrão', function () {
+test('the seeder dispatches the sync job on the default queue', function () {
     Queue::fake();
 
     $this->seed(DatabaseSeeder::class);
@@ -46,7 +46,7 @@ test('o seeder despacha o job de sincronização na fila padrão', function () {
     Queue::assertPushed(SyncPokemonCatalog::class);
 });
 
-test('a sincronização semanal está registrada no agendador', function () {
+test('the weekly sync is registered on the scheduler', function () {
     Artisan::call('schedule:list');
 
     $output = Artisan::output();
@@ -55,7 +55,7 @@ test('a sincronização semanal está registrada no agendador', function () {
     expect($output)->toContain('0 3 * * 0');
 });
 
-test('as 18 traduções de tipo em pt-BR estão completas', function () {
+test('the 18 pt-BR type translations are complete', function () {
     $canonicalTypes = [
         'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting',
         'poison', 'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost',

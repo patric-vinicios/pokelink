@@ -8,7 +8,7 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Event;
 use Livewire\Volt\Volt;
 
-test('o evento é transmitido nos canais privados da conversa e do destinatário', function () {
+test('the event is broadcast on the conversation\'s and the recipient\'s private channels', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
     $conversation = Conversation::betweenUsers($a, $b);
@@ -22,7 +22,7 @@ test('o evento é transmitido nos canais privados da conversa e do destinatário
     expect($channels[1]->name)->toBe('private-App.Models.User.'.$b->id);
 });
 
-test('o evento é nomeado message.sent', function () {
+test('the event is named message.sent', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
     $conversation = Conversation::betweenUsers($a, $b);
@@ -31,7 +31,7 @@ test('o evento é nomeado message.sent', function () {
     expect((new MessageSent($message))->broadcastAs())->toBe('message.sent');
 });
 
-test('o payload transmitido contém os campos esperados', function () {
+test('the broadcast payload contains the expected fields', function () {
     $a = User::factory()->create(['name' => 'Ash']);
     $b = User::factory()->create();
     $conversation = Conversation::betweenUsers($a, $b);
@@ -49,7 +49,7 @@ test('o payload transmitido contém os campos esperados', function () {
     expect($payload)->toHaveKey('created_at');
 });
 
-test('enviar uma mensagem despacha o evento MessageSent', function () {
+test('sending a message dispatches the MessageSent event', function () {
     Event::fake([MessageSent::class]);
 
     $me = User::factory()->create();

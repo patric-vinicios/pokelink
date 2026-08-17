@@ -15,22 +15,22 @@ use App\Models\User;
 use Database\Seeders\UserSeeder;
 use Illuminate\Support\Facades\Gate;
 
-test('a rota de health responde 200', function () {
+test('the health route responds 200', function () {
     $this->get('/up')->assertOk();
 });
 
-test('um visitante é redirecionado para o login', function () {
+test('a visitor is redirected to login', function () {
     $this->get('/')->assertRedirect('/login');
 });
 
-test('a tela de login renderiza', function () {
+test('the login screen renders', function () {
     $this->get('/login')
         ->assertOk()
         ->assertSee('email', escape: false)
         ->assertSee('password', escape: false);
 });
 
-test('um usuário autenticado alcança a raiz', function () {
+test('an authenticated user reaches the root', function () {
     $this->seed(UserSeeder::class);
 
     $this->actingAs(User::where('email', 'admin@pokelink.test')->firstOrFail())
@@ -38,7 +38,7 @@ test('um usuário autenticado alcança a raiz', function () {
         ->assertOk();
 });
 
-test('fora do ambiente local o dashboard do Horizon exige autenticação', function () {
+test('outside the local environment the Horizon dashboard requires authentication', function () {
     // In `local` the gate is open, so the evaluator can watch the catalog sync
     // (F06) during first boot without signing in. Everywhere else — including
     // the `testing` environment this assertion runs in — it must not be.

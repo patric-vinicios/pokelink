@@ -4,7 +4,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Volt\Volt;
 
-test('a tela de registro renderiza', function () {
+test('the registration screen renders', function () {
     $response = $this->get('/register');
 
     $response
@@ -12,7 +12,7 @@ test('a tela de registro renderiza', function () {
         ->assertSeeVolt('pages.auth.register');
 });
 
-test('um visitante pode se registrar com dados válidos e é autenticado automaticamente', function () {
+test('a visitor can register with valid data and is automatically authenticated', function () {
     $component = Volt::test('pages.auth.register')
         ->set('form.name', 'Ash Ketchum')
         ->set('form.email', 'ash@pokelink.test')
@@ -30,7 +30,7 @@ test('um visitante pode se registrar com dados válidos e é autenticado automat
     expect(session('status'))->toBe('Conta criada com sucesso. Bem-vindo(a), Ash Ketchum!');
 });
 
-test('a senha é persistida como hash bcrypt e nunca em texto puro', function () {
+test('the password is persisted as a bcrypt hash and never in plain text', function () {
     Volt::test('pages.auth.register')
         ->set('form.name', 'Misty Waterflower')
         ->set('form.email', 'misty@pokelink.test')
@@ -45,7 +45,7 @@ test('a senha é persistida como hash bcrypt e nunca em texto puro', function ()
     expect(Hash::check('password123', $user->password))->toBeTrue();
 });
 
-test('um e-mail já cadastrado é rejeitado e nenhuma segunda conta é criada', function () {
+test('an already-registered email is rejected and no second account is created', function () {
     User::factory()->create(['email' => 'duplicado@pokelink.test']);
 
     $component = Volt::test('pages.auth.register')
@@ -61,7 +61,7 @@ test('um e-mail já cadastrado é rejeitado e nenhuma segunda conta é criada', 
     expect(User::count())->toBe(1);
 });
 
-test('uma senha com menos de 8 caracteres é rejeitada com a mensagem específica', function () {
+test('a password under 8 characters is rejected with the specific message', function () {
     $component = Volt::test('pages.auth.register')
         ->set('form.name', 'Brock Harrison')
         ->set('form.email', 'brock@pokelink.test')
@@ -75,7 +75,7 @@ test('uma senha com menos de 8 caracteres é rejeitada com a mensagem específic
     $this->assertGuest();
 });
 
-test('a confirmação de senha divergente é rejeitada e os campos de senha são limpos', function () {
+test('a mismatched password confirmation is rejected and the password fields are cleared', function () {
     $component = Volt::test('pages.auth.register')
         ->set('form.name', 'Gary Oak')
         ->set('form.email', 'gary@pokelink.test')
@@ -92,7 +92,7 @@ test('a confirmação de senha divergente é rejeitada e os campos de senha são
     expect($component->get('form.email'))->toBe('gary@pokelink.test');
 });
 
-test('duas submissões rápidas com o mesmo e-mail criam exatamente um usuário', function () {
+test('two rapid submissions with the same email create exactly one user', function () {
     $first = Volt::test('pages.auth.register')
         ->set('form.name', 'Primeiro Usuário')
         ->set('form.email', 'corrida@pokelink.test')
@@ -113,7 +113,7 @@ test('duas submissões rápidas com o mesmo e-mail criam exatamente um usuário'
     expect(User::count())->toBe(1);
 });
 
-test('um payload com campos inesperados nunca alcança o modelo', function () {
+test('a payload with unexpected fields never reaches the model', function () {
     Volt::test('pages.auth.register')
         ->set('form.name', 'Dawn Berlitz')
         ->set('form.email', 'dawn@pokelink.test')
@@ -129,7 +129,7 @@ test('um payload com campos inesperados nunca alcança o modelo', function () {
         ->not->toHaveKey('is_admin');
 });
 
-test('uma falha ao gravar no banco não deixa conta parcial', function () {
+test('a database write failure leaves no partial account', function () {
     User::creating(fn () => throw new RuntimeException('falha simulada de escrita'));
 
     $component = Volt::test('pages.auth.register')

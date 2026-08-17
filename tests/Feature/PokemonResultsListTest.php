@@ -25,7 +25,7 @@ beforeEach(function () {
     $this->actingAs(User::factory()->create());
 });
 
-test('cada card mostra o sprite, o nome capitalizado, o número nacional com zero à esquerda e um badge por tipo', function () {
+test('each card shows the sprite, capitalized name, zero-padded national number, and one badge per type', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     $flying = Type::factory()->create(['slug' => 'flying', 'label_pt' => 'voador']);
 
@@ -41,7 +41,7 @@ test('cada card mostra o sprite, o nome capitalizado, o número nacional com zer
         ->assertSee('Voador');
 });
 
-test('exatamente 20 cards renderizam por página e o resumo bate com o total do filtro', function () {
+test('exactly 20 cards render per page and the summary matches the filter\'s total', function () {
     Pokemon::factory()
         ->count(45)
         ->sequence(fn ($sequence) => ['number' => $sequence->index + 1])
@@ -58,7 +58,7 @@ test('exatamente 20 cards renderizam por página e o resumo bate com o total do 
     expect(substr_count($response->getContent(), 'wire:key="pokemon-'))->toBe(20);
 });
 
-test('solicitar uma página além da última redireciona para a última página válida', function () {
+test('requesting a page past the last one redirects to the last valid page', function () {
     Pokemon::factory()
         ->count(25)
         ->sequence(fn ($sequence) => ['number' => $sequence->index + 1])
@@ -74,7 +74,7 @@ test('solicitar uma página além da última redireciona para a última página 
         ->assertSet('paginators.page', 2);
 });
 
-test('clicar em um card leva a pokemon show com o contexto de página e filtros', function () {
+test('clicking a card leads to pokemon show with the page and filter context', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     $charmander = Pokemon::factory()->create(['number' => 4, 'name' => 'charmander', 'slug' => 'charmander']);
     $charmander->types()->attach($fire->id);
@@ -90,7 +90,7 @@ test('clicar em um card leva a pokemon show com o contexto de página e filtros'
     $response->assertOk()->assertSee($expectedHref);
 });
 
-test('uma url quebrada de sprite renderiza o placeholder sem quebrar o layout do card', function () {
+test('a broken sprite url renders the placeholder without breaking the card layout', function () {
     Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
 
     $response = $this->get('/');
@@ -101,7 +101,7 @@ test('uma url quebrada de sprite renderiza o placeholder sem quebrar o layout do
         ->assertSee('bulbasaur');
 });
 
-test('cards de esqueleto ocupam a grade durante mudanças de filtro e paginação', function () {
+test('skeleton cards occupy the grid during filter and pagination changes', function () {
     Pokemon::factory()
         ->count(5)
         ->sequence(fn ($sequence) => ['number' => $sequence->index + 1])
@@ -112,7 +112,7 @@ test('cards de esqueleto ocupam a grade durante mudanças de filtro e paginaçã
     expect(substr_count($html, 'animate-pulse'))->toBe(20);
 });
 
-test('a grade usa as colunas responsivas 4 3 2 1', function () {
+test('the grid uses the responsive 4 3 2 1 columns', function () {
     Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
 
     $response = $this->get('/');
@@ -121,7 +121,7 @@ test('a grade usa as colunas responsivas 4 3 2 1', function () {
         ->assertSee('grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4', false);
 });
 
-test('a consulta filtrada do f07 dirige a contagem de cards e o total de páginas do paginador', function () {
+test('f07\'s filtered query drives the card count and the paginator\'s page total', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
 

@@ -3,7 +3,7 @@
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Route;
 
-test('um token csrf incompatível redireciona para o login com mensagem de sessão expirada', function () {
+test('a mismatched csrf token redirects to login with an expired-session message', function () {
     Route::post('/__teste-csrf-expirado', function () {
         throw new TokenMismatchException('CSRF token mismatch.');
     })->middleware('web');
@@ -14,7 +14,7 @@ test('um token csrf incompatível redireciona para o login com mensagem de sess�
     $response->assertSessionHas('status', 'Sua sessão expirou. Faça login novamente.');
 });
 
-test('uma falha de conexão com o banco de dados durante a sessão exibe a página 503 em português', function () {
+test('a database connection failure mid-session shows the pt-BR 503 page', function () {
     Route::get('/__teste-falha-banco', function () {
         throw new PDOException('SQLSTATE[HY000] [2002] Connection refused');
     })->middleware('web');

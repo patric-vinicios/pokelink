@@ -16,7 +16,7 @@ use App\Models\Pokemon;
 use App\Models\User;
 use Livewire\Volt\Volt;
 
-test('a barra de navegacao mostra a contagem atual de favoritos', function () {
+test('the navigation bar shows the current favorites count', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -29,7 +29,7 @@ test('a barra de navegacao mostra a contagem atual de favoritos', function () {
     Volt::test('layout.navigation')->assertSee('3');
 });
 
-test('a contagem satura em 99 mais', function () {
+test('the count caps at 99+', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -42,7 +42,7 @@ test('a contagem satura em 99 mais', function () {
     Volt::test('layout.navigation')->assertSee('99+');
 });
 
-test('a contagem de favoritos atualiza quando o evento favorite-toggled e recebido', function () {
+test('the favorites count updates when the favorite-toggled event is received', function () {
     $user = User::factory()->create();
     $pokemon = Pokemon::factory()->create(['number' => 1]);
 
@@ -56,7 +56,7 @@ test('a contagem de favoritos atualiza quando o evento favorite-toggled e recebi
     $component->dispatch('favorite-toggled')->assertSee('1');
 });
 
-test('sem favoritos nenhum badge e exibido', function () {
+test('with no favorites, no badge is shown', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 

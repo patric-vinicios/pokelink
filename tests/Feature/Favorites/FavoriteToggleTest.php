@@ -25,7 +25,7 @@ beforeEach(function () {
     $this->actingAs($this->user);
 });
 
-test('clicar na estrela de um card cria exatamente uma linha e preenche a estrela', function () {
+test('clicking a card\'s star creates exactly one row and fills the star', function () {
     Volt::test('pokemon.favorite-toggle', [
         'number' => $this->pokemon->number,
         'name' => $this->pokemon->name,
@@ -38,7 +38,7 @@ test('clicar na estrela de um card cria exatamente uma linha e preenche a estrel
     expect(Favorite::query()->where('user_id', $this->user->id)->where('pokemon_number', $this->pokemon->number)->count())->toBe(1);
 });
 
-test('clicar duas vezes na mesma estrela deixa exatamente uma linha no banco', function () {
+test('clicking the same star twice leaves exactly one row in the database', function () {
     Volt::test('pokemon.favorite-toggle', [
         'number' => $this->pokemon->number,
         'name' => $this->pokemon->name,
@@ -56,7 +56,7 @@ test('clicar duas vezes na mesma estrela deixa exatamente uma linha no banco', f
     expect(Favorite::query()->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-test('favoritar o mesmo pokemon duas vezes seguidas sem recarregar continua idempotente', function () {
+test('favoriting the same pokemon twice in a row without reloading stays idempotent', function () {
     $component = Volt::test('pokemon.favorite-toggle', [
         'number' => $this->pokemon->number,
         'name' => $this->pokemon->name,
@@ -70,7 +70,7 @@ test('favoritar o mesmo pokemon duas vezes seguidas sem recarregar continua idem
     expect(Favorite::query()->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-test('o estado de favorito e consistente entre o card e a pagina de detalhes', function () {
+test('favorite state is consistent between the card and the detail page', function () {
     Volt::test('pokemon.favorite-toggle', [
         'number' => $this->pokemon->number,
         'name' => $this->pokemon->name,
@@ -91,7 +91,7 @@ test('o estado de favorito e consistente entre o card e a pagina de detalhes', f
     ])->assertSet('favorited', true);
 });
 
-test('uma falha de escrita reverte o estado e mostra a mensagem de erro', function () {
+test('a write failure reverts the state and shows the error message', function () {
     // A pokemon_number with no matching catalog row violates the favorites
     // table's foreign key, producing a genuine QueryException on write —
     // without touching schema state the way dropping a table would.
@@ -107,7 +107,7 @@ test('uma falha de escrita reverte o estado e mostra a mensagem de erro', functi
     expect(Favorite::query()->where('pokemon_number', 999999)->exists())->toBeFalse();
 });
 
-test('remover um favorito dispara o evento favorite-removed e adicionar dispara apenas favorite-toggled', function () {
+test('removing a favorite dispatches the favorite-removed event and adding dispatches only favorite-toggled', function () {
     $component = Volt::test('pokemon.favorite-toggle', [
         'number' => $this->pokemon->number,
         'name' => $this->pokemon->name,

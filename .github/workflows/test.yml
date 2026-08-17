@@ -1,0 +1,33 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-app-image
+
+      # A real Redis, not a GH Actions `services:` one: PokeApiClient's
+      # response cache explicitly targets the "redis" store
+      # (config/pokeapi.php), which bypasses phpunit.xml's
+      # CACHE_STORE=array default. Named "redis" on its own network so it
+      # resolves at the same hostname .env.example already points at
+      # (REDIS_HOST=redis) — no env override needed.
+      - run: docker network create ci-net
+      - run: docker run -d --name redis --network ci-net redis:7-alpine
+      - run: sleep 2 && docker run --rm --network ci-net redis:7-alpine redis-cli -h redis ping
+
+      # CONTAINER_ROLE=ci skips the entrypoint's MySQL wait + migrate/seed
+      # (docker/php/entrypoint.sh only runs those for the "app" role) — the
+      # DB is in-memory SQLite per phpunit.xml, so no MySQL container is
+      # needed at all.
+      - run: docker run --rm --network ci-net -e CONTAINER_ROLE=ci pokelink-app:ci php artisan test

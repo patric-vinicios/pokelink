@@ -51,6 +51,7 @@ class User extends Authenticatable
     public function favorites(): BelongsToMany
     {
         return $this->belongsToMany(Pokemon::class, 'favorites', 'user_id', 'pokemon_number', 'id', 'number')
+            // @phpstan-ignore argument.type (Favorite uses AsPivot instead of extending Pivot — see its class docblock)
             ->using(Favorite::class)
             ->withTimestamps();
     }

@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Livewire\Volt\Volt;
 
-test('a tela de login renderiza o componente volt', function () {
+test('the login screen renders the volt component', function () {
     $response = $this->get('/login');
 
     $response
@@ -13,7 +13,7 @@ test('a tela de login renderiza o componente volt', function () {
         ->assertSeeVolt('pages.auth.login');
 });
 
-test('um usuário se autentica com credenciais válidas pelo formulário de login', function () {
+test('a user authenticates with valid credentials via the login form', function () {
     $user = User::factory()->create();
 
     $component = Volt::test('pages.auth.login')
@@ -29,7 +29,7 @@ test('um usuário se autentica com credenciais válidas pelo formulário de logi
     $this->assertAuthenticated();
 });
 
-test('um usuário não se autentica com senha inválida', function () {
+test('a user does not authenticate with an invalid password', function () {
     $user = User::factory()->create();
 
     $component = Volt::test('pages.auth.login')
@@ -45,7 +45,7 @@ test('um usuário não se autentica com senha inválida', function () {
     $this->assertGuest();
 });
 
-test('a barra de navegação renderiza para um usuário autenticado', function () {
+test('the navigation bar renders for an authenticated user', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user);
@@ -57,7 +57,7 @@ test('a barra de navegação renderiza para um usuário autenticado', function (
         ->assertSeeVolt('layout.navigation');
 });
 
-test('um usuário autenticado consegue fazer logout', function () {
+test('an authenticated user can log out', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user);
@@ -73,7 +73,7 @@ test('um usuário autenticado consegue fazer logout', function () {
     $this->assertGuest();
 });
 
-test('um convidado que acessa uma rota protegida é redirecionado para o login com uma mensagem', function (string $uri) {
+test('a guest accessing a protected route is redirected to login with a message', function (string $uri) {
     $response = $this->get($uri);
 
     $response->assertRedirect(route('login'));
@@ -85,7 +85,7 @@ test('um convidado que acessa uma rota protegida é redirecionado para o login c
     '/chat',
 ]);
 
-test('o login bem-sucedido restaura a url originalmente pretendida', function () {
+test('a successful login restores the originally intended url', function () {
     $user = User::factory()->create();
 
     $this->get('/perfil')->assertRedirect(route('login'));
@@ -101,7 +101,7 @@ test('o login bem-sucedido restaura a url originalmente pretendida', function ()
     $this->assertAuthenticated();
 });
 
-test('login com senha errada e login com e-mail inexistente retornam a mesma mensagem genérica', function () {
+test('login with a wrong password and login with a nonexistent email return the same generic message', function () {
     $user = User::factory()->create();
 
     $wrongPassword = Volt::test('pages.auth.login')
@@ -120,7 +120,7 @@ test('login com senha errada e login com e-mail inexistente retornam a mesma men
     $this->assertGuest();
 });
 
-test('a sexta tentativa de login em um minuto é bloqueada com o tempo restante', function () {
+test('the sixth login attempt within a minute is blocked with the remaining time', function () {
     $user = User::factory()->create();
 
     foreach (range(1, 5) as $attempt) {
@@ -144,7 +144,7 @@ test('a sexta tentativa de login em um minuto é bloqueada com o tempo restante'
     $this->assertGuest();
 });
 
-test('um usuário autenticado que acessa login ou register é redirecionado', function () {
+test('an authenticated user visiting login or register is redirected', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user);
@@ -153,7 +153,7 @@ test('um usuário autenticado que acessa login ou register é redirecionado', fu
     $this->get('/register')->assertRedirect(route('dashboard'));
 });
 
-test('logout invalida a sessão e o botão voltar não reexibe conteúdo autenticado', function () {
+test('logout invalidates the session and the back button does not re-show authenticated content', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user);
@@ -165,7 +165,7 @@ test('logout invalida a sessão e o botão voltar não reexibe conteúdo autenti
     $this->get('/')->assertRedirect(route('login'));
 });
 
-test('lembrar-me estende a duração do cookie de sessão', function () {
+test('remember-me extends the session cookie\'s duration', function () {
     $user = User::factory()->create();
 
     Volt::test('pages.auth.login')

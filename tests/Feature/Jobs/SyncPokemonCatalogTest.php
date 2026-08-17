@@ -15,7 +15,7 @@ beforeEach(function () {
     resetPokeApiState();
 });
 
-test('o sync faz exatamente 19 chamadas ao PokeAPI', function () {
+test('the sync makes exactly 19 calls to PokeAPI', function () {
     fakePokeApiCatalog(
         entries: [
             ['number' => 1, 'name' => 'bulbasaur'],
@@ -33,7 +33,7 @@ test('o sync faz exatamente 19 chamadas ao PokeAPI', function () {
     Http::assertSentCount(19);
 });
 
-test('o sync cria os registros de pokemon e tipos a partir do catálogo', function () {
+test('the sync creates the pokemon and type records from the catalog', function () {
     fakePokeApiCatalog(
         entries: [
             ['number' => 1, 'name' => 'bulbasaur'],
@@ -61,7 +61,7 @@ test('o sync cria os registros de pokemon e tipos a partir do catálogo', functi
     expect($charmander->types()->pluck('slug')->all())->toBe(['fire']);
 });
 
-test('executar o sync duas vezes não duplica pokemon nem vínculos de tipo', function () {
+test('running the sync twice does not duplicate pokemon or type links', function () {
     fakePokeApiCatalog(
         entries: [
             ['number' => 1, 'name' => 'bulbasaur'],
@@ -84,7 +84,7 @@ test('executar o sync duas vezes não duplica pokemon nem vínculos de tipo', fu
     expect(DB::table('types')->count())->toBe(18);
 });
 
-test('o sync divide as escritas em lotes de 500', function () {
+test('the sync splits writes into batches of 500', function () {
     Log::spy();
 
     $entries = collect(range(1, 501))
@@ -102,7 +102,7 @@ test('o sync divide as escritas em lotes de 500', function () {
         ->twice();
 });
 
-test('o job retorna quantos pokemon foram criados e quantos foram atualizados', function () {
+test('the job returns how many pokemon were created and how many were updated', function () {
     fakePokeApiCatalog(entries: [
         ['number' => 1, 'name' => 'bulbasaur'],
         ['number' => 4, 'name' => 'charmander'],
@@ -121,7 +121,7 @@ test('o job retorna quantos pokemon foram criados e quantos foram atualizados', 
     expect($second->total)->toBe(2);
 });
 
-test('uma falha de disponibilidade lança PokeApiSyncException com o endpoint', function () {
+test('an availability failure throws PokeApiSyncException with the endpoint', function () {
     Http::fake([
         'https://pokeapi.co/api/v2/pokemon?*' => Http::response(status: 500),
     ]);
@@ -132,7 +132,7 @@ test('uma falha de disponibilidade lança PokeApiSyncException com o endpoint', 
     expect(Pokemon::count())->toBe(0);
 });
 
-test('um índice sem a chave results falha rápido em vez de gravar linhas malformadas', function () {
+test('an index missing the results key fails fast instead of writing malformed rows', function () {
     Http::fake([
         'https://pokeapi.co/api/v2/pokemon?*' => Http::response(['count' => 0]),
     ]);
@@ -143,7 +143,7 @@ test('um índice sem a chave results falha rápido em vez de gravar linhas malfo
     expect(Pokemon::count())->toBe(0);
 });
 
-test('um nome de membro sem correspondência no índice é ignorado e registrado', function () {
+test('a member name with no match in the index is skipped and logged', function () {
     Log::spy();
 
     fakePokeApiCatalog(
@@ -164,7 +164,7 @@ test('um nome de membro sem correspondência no índice é ignorado e registrado
         ->once();
 });
 
-test('o job carrega tries, backoff e timeout conforme a especificação', function () {
+test('the job loads tries, backoff, and timeout per the spec', function () {
     $job = new SyncPokemonCatalog;
 
     expect($job->tries)->toBe(3);
@@ -172,7 +172,7 @@ test('o job carrega tries, backoff e timeout conforme a especificação', functi
     expect($job->timeout)->toBe(300);
 });
 
-test('o job está marcado com a tag pokemon-sync', function () {
+test('the job is tagged with pokemon-sync', function () {
     $job = new SyncPokemonCatalog;
 
     expect($job->tags())->toBe(['pokemon-sync']);

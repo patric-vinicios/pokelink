@@ -21,7 +21,7 @@ class PokemonFactory extends Factory
             'number' => $number,
             'name' => $slug,
             'slug' => $slug,
-            'sprite_url' => "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{$number}.png",
+            'sprite_url' => "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/{$number}.png",
         ];
     }
 }

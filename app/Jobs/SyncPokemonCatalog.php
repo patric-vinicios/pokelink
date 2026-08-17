@@ -255,6 +255,10 @@ class SyncPokemonCatalog implements ShouldQueue
 
     private function officialArtworkUrl(int $number): string
     {
-        return "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{$number}.png";
+        // See the identical comment on PokeApiClient::officialArtworkUrl():
+        // jsdelivr mirrors the same files through a real CDN;
+        // raw.githubusercontent.com rate-limits hard under this app's
+        // per-page sprite volume.
+        return "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/{$number}.png";
     }
 }

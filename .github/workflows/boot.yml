@@ -1,0 +1,27 @@
+name: boot
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  boot:
+    # End-to-end check for the README's central promise — the full 6-service
+    # stack boots from a clean clone with one command — using the exact
+    # scripts a developer runs locally, not a CI-only shortcut. None of the
+    # other workflows exercise mysql/redis/nginx/Horizon/Reverb at all.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: ./gates/init.sh
+
+      - run: curl -sf http://localhost:8000/up
+
+      - if: always()
+        run: ./gates/down.sh
