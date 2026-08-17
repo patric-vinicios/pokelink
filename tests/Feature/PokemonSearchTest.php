@@ -181,6 +181,14 @@ test('with an empty catalog, the search area shows the syncing state', function 
         ->assertSee('wire:poll.5s', false);
 });
 
+test('the results toolbar omits inactive sorting and view controls', function () {
+    Pokemon::factory()->create();
+
+    Volt::test('pages.pokemon.search')
+        ->assertDontSee('Ordenar por:')
+        ->assertDontSee('Visualização em grade selecionada');
+});
+
 test('the type select is populated with the 18 types and their pt-BR labels', function () {
     fakePokeApiCatalog(entries: [
         ['number' => 1, 'name' => 'bulbasaur'],
@@ -194,6 +202,25 @@ test('the type select is populated with the 18 types and their pt-BR labels', fu
 
     collect(config('pokemon.type_labels'))
         ->each(fn (string $label) => $component->assertSee($label));
+});
+
+test('the type filter renders the official icon for each of the 18 types', function () {
+    collect(config('pokemon.type_labels'))
+        ->each(fn (string $label, string $slug) => Type::factory()->create([
+            'slug' => $slug,
+            'label_pt' => $label,
+        ]));
+
+    $component = Volt::test('pages.pokemon.search');
+
+    collect(config('pokemon.type_labels'))->keys()->each(function (string $slug) use ($component) {
+        $sourcePath = "images/icons/types/{$slug}.svg";
+        $relativePath = "images/icons/types/glyphs/{$slug}.svg";
+
+        expect(public_path($sourcePath))->toBeFile();
+        expect(public_path($relativePath))->toBeFile();
+        $component->assertSee(asset($relativePath), false);
+    });
 });
 
 test('a pokémon present in the local table is findable by a name fragment', function () {
