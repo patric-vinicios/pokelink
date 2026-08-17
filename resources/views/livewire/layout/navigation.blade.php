@@ -1,6 +1,9 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Models\Favorite;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
 new class extends Component
@@ -23,6 +26,22 @@ new class extends Component
     {
         return request()->routeIs('dashboard') || request()->routeIs('pokemon.*');
     }
+
+    #[Computed]
+    public function favoriteCount(): int
+    {
+        return Favorite::query()->where('user_id', auth()->id())->count();
+    }
+
+    /**
+     * No body needed — forces favoriteCount() to re-evaluate whenever any
+     * favorite-toggle instance on the page reports a change (F10).
+     */
+    #[On('favorite-toggled')]
+    public function refreshFavoriteCount(): void
+    {
+        //
+    }
 }; ?>
 
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
@@ -44,6 +63,11 @@ new class extends Component
                     </x-nav-link>
                     <x-nav-link :href="route('favoritos')" :active="request()->routeIs('favoritos')" wire:navigate>
                         Favoritos
+                        @if ($this->favoriteCount > 0)
+                            <x-badge color="indigo" class="ms-1.5">
+                                {{ $this->favoriteCount > config('favorites.badge_cap') ? config('favorites.badge_cap').'+' : $this->favoriteCount }}
+                            </x-badge>
+                        @endif
                     </x-nav-link>
                     <x-nav-link :href="route('chat')" :active="request()->routeIs('chat')" wire:navigate>
                         Chat
@@ -100,6 +124,11 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('favoritos')" :active="request()->routeIs('favoritos')" wire:navigate>
                 Favoritos
+                @if ($this->favoriteCount > 0)
+                    <x-badge color="indigo" class="ms-1.5">
+                        {{ $this->favoriteCount > config('favorites.badge_cap') ? config('favorites.badge_cap').'+' : $this->favoriteCount }}
+                    </x-badge>
+                @endif
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('chat')" :active="request()->routeIs('chat')" wire:navigate>
                 Chat

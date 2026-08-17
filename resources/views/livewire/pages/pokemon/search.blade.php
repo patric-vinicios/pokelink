@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Favorite;
 use App\Models\Pokemon;
 use App\Models\Type;
 use Livewire\Attributes\Computed;
@@ -39,6 +40,13 @@ new #[Layout('layouts.app')] class extends Component
     {
         $query = fn () => Pokemon::query()
             ->with('types')
+            ->select('pokemon.*')
+            ->addSelect(['favorited' => Favorite::query()
+                ->selectRaw('1')
+                ->whereColumn('pokemon_number', 'pokemon.number')
+                ->where('user_id', auth()->id())
+                ->limit(1),
+            ])
             ->when($this->search !== '', fn ($query) => $query->where(
                 'name',
                 'like',
@@ -185,7 +193,18 @@ new #[Layout('layouts.app')] class extends Component
                                 :search="$this->search"
                                 :type="$this->type"
                                 :page="$this->results->currentPage()"
-                            />
+                            >
+                                <x-slot name="favorite">
+                                    <livewire:pokemon.favorite-toggle
+                                        :number="$pokemon->number"
+                                        :name="$pokemon->name"
+                                        :favorited="(bool) $pokemon->favorited"
+                                        variant="icon"
+                                        :confirm-removal="false"
+                                        :key="'favorite-toggle-'.$pokemon->number"
+                                    />
+                                </x-slot>
+                            </x-pokemon-card>
                         @endforeach
                     </div>
 

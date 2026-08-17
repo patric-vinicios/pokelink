@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Favorite;
 use App\Models\Pokemon;
 use App\Services\PokeApi\PokeApiClient;
 use Livewire\Attributes\Computed;
@@ -128,6 +129,15 @@ new #[Layout('layouts.app')] class extends Component
         $this->detailLoaded = false;
 
         $this->loadDetail();
+    }
+
+    #[Computed]
+    public function favorited(): bool
+    {
+        return $this->number !== null && Favorite::query()
+            ->where('user_id', auth()->id())
+            ->where('pokemon_number', $this->number)
+            ->exists();
     }
 
     #[Computed]
@@ -266,7 +276,14 @@ new #[Layout('layouts.app')] class extends Component
                                 <h1 class="text-2xl font-bold capitalize text-gray-900">{{ $name }}</h1>
                             </div>
 
-                            <div data-favorite-slot></div>
+                            <livewire:pokemon.favorite-toggle
+                                :number="$number"
+                                :name="$name"
+                                :favorited="$this->favorited"
+                                variant="button"
+                                :confirm-removal="false"
+                                :key="'favorite-toggle-'.$number"
+                            />
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-1">

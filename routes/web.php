@@ -13,8 +13,7 @@ use Livewire\Volt\Volt;
 | and intended-URL restore behaviour).
 |
 | These four routes match the shell's navigation (F04): Início, Favoritos,
-| Chat, and Meu Perfil. `/` is the Pokémon search screen (F07); /favoritos
-| and /chat render a placeholder until F10 and F12 replace them.
+| Chat, and Meu Perfil. `/` is the Pokémon search screen (F07).
 |
 | `auth.session` is also applied to all four: it's what makes a password
 | change's other-session invalidation (F11) observable, since it compares
@@ -33,7 +32,9 @@ Volt::route('/pokemon/{slug}', 'pages.pokemon.show')
     ->middleware(['auth', 'auth.session'])
     ->name('pokemon.show');
 
-Route::view('/favoritos', 'favoritos')
+// Favorites page (F10): lists, filters, and sorts the authenticated user's
+// collection using the same card component the search grid renders.
+Volt::route('/favoritos', 'pages.pokemon.favorites')
     ->middleware(['auth', 'auth.session'])
     ->name('favoritos');
 
