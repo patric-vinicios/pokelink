@@ -5,7 +5,7 @@ use App\Policies\UpdateProfilePolicy;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Volt\Volt;
 
-test('a página de perfil exibe nome, e-mail e data de criação da conta', function () {
+test('the profile page shows name, email, and account creation date', function () {
     $user = User::factory()->create([
         'name' => 'Ash Ketchum',
         'email' => 'ash@pokelink.test',
@@ -22,7 +22,7 @@ test('a página de perfil exibe nome, e-mail e data de criação da conta', func
         ->assertSee($user->created_at->format('d/m/Y'));
 });
 
-test('o e-mail é exibido como somente leitura', function () {
+test('the email is displayed as read-only', function () {
     $user = User::factory()->create(['email' => 'ash@pokelink.test']);
 
     $this->actingAs($user);
@@ -35,7 +35,7 @@ test('o e-mail é exibido como somente leitura', function () {
         ->assertSee('O e-mail não pode ser alterado.');
 });
 
-test('a barra de navegação está conectada ao evento profile-updated do formulário de perfil', function () {
+test('the navigation bar is wired to the profile-updated event from the profile form', function () {
     $this->actingAs(User::factory()->create());
 
     $this->get('/perfil')
@@ -43,7 +43,7 @@ test('a barra de navegação está conectada ao evento profile-updated do formul
         ->assertSee('x-on:profile-updated.window', false);
 });
 
-test('um usuário pode atualizar o próprio nome', function () {
+test('a user can update their own name', function () {
     $user = User::factory()->create(['name' => 'Nome Antigo']);
 
     $this->actingAs($user);
@@ -59,7 +59,7 @@ test('um usuário pode atualizar o próprio nome', function () {
     expect($user->refresh()->name)->toBe('Nome Novo');
 });
 
-test('um nome inválido é rejeitado pela validação', function () {
+test('an invalid name is rejected by validation', function () {
     $user = User::factory()->create(['name' => 'Nome Original']);
 
     $this->actingAs($user);
@@ -72,7 +72,7 @@ test('um nome inválido é rejeitado pela validação', function () {
     expect($user->refresh()->name)->toBe('Nome Original');
 });
 
-test('uma solicitação não pode alterar o nome ou e-mail de outro usuário', function () {
+test('a request cannot change another user\'s name or email', function () {
     $user = User::factory()->create();
     $other = User::factory()->create(['name' => 'Outro Usuário', 'email' => 'outro@pokelink.test']);
 
@@ -89,7 +89,7 @@ test('uma solicitação não pode alterar o nome ou e-mail de outro usuário', f
         ->and($other->email)->toBe('outro@pokelink.test');
 });
 
-test('a política nega a atualização de um usuário diferente do autenticado', function () {
+test('the policy denies updating a user other than the authenticated one', function () {
     $policy = new UpdateProfilePolicy;
     $user = User::factory()->create();
     $other = User::factory()->create();
@@ -98,7 +98,7 @@ test('a política nega a atualização de um usuário diferente do autenticado',
         ->and($policy->update($user, $user))->toBeTrue();
 });
 
-test('uma senha atual correta permite a alteração de senha', function () {
+test('a correct current password allows the password change', function () {
     $user = User::factory()->create(['password' => Hash::make('password')]);
 
     $this->actingAs($user);
@@ -121,7 +121,7 @@ test('uma senha atual correta permite a alteração de senha', function () {
         ->and(Hash::check('nova-senha-123', $newHash))->toBeTrue();
 });
 
-test('uma senha atual incorreta é rejeitada com mensagem em português e nada é gravado', function () {
+test('an incorrect current password is rejected with a pt-BR message and nothing is written', function () {
     $user = User::factory()->create(['password' => Hash::make('password')]);
     $originalHash = $user->password;
 
@@ -141,7 +141,7 @@ test('uma senha atual incorreta é rejeitada com mensagem em português e nada �
     expect($user->refresh()->password)->toBe($originalHash);
 });
 
-test('uma nova senha igual à atual é rejeitada', function () {
+test('a new password equal to the current one is rejected', function () {
     $user = User::factory()->create(['password' => Hash::make('password')]);
     $originalHash = $user->password;
 
@@ -161,7 +161,7 @@ test('uma nova senha igual à atual é rejeitada', function () {
     expect($user->refresh()->password)->toBe($originalHash);
 });
 
-test('a confirmação de senha divergente é rejeitada preservando a senha atual digitada', function () {
+test('a mismatched password confirmation is rejected while preserving the typed current password', function () {
     $user = User::factory()->create(['password' => Hash::make('password')]);
 
     $this->actingAs($user);
@@ -192,7 +192,7 @@ test('a confirmação de senha divergente é rejeitada preservando a senha atual
 |
 */
 
-test('após a troca de senha uma sessão autenticada anterior é desconectada ao acessar uma rota protegida', function () {
+test('after a password change, a previously authenticated session is logged out when accessing a protected route', function () {
     $user = User::factory()->create(['password' => Hash::make('password')]);
 
     $this->actingAs($user);

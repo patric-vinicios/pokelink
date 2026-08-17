@@ -13,7 +13,7 @@
 
 use App\Models\User;
 
-test('a barra de navegação exibe os quatro destinos', function () {
+test('the navigation bar shows the four destinations', function () {
     $this->actingAs(User::factory()->create())
         ->get('/')
         ->assertOk()
@@ -23,7 +23,7 @@ test('a barra de navegação exibe os quatro destinos', function () {
         ->assertSee('Meu Perfil');
 });
 
-test('início fica destacado na página inicial', function () {
+test('"Início" is highlighted on the home page', function () {
     $html = $this->actingAs(User::factory()->create())
         ->get('/')
         ->assertOk()
@@ -35,7 +35,7 @@ test('início fica destacado na página inicial', function () {
         ->and(navLinkIsActive($html, 'Meu Perfil'))->toBeFalse();
 });
 
-test('meu perfil fica destacado em /perfil', function () {
+test('"Meu Perfil" is highlighted on /perfil', function () {
     $html = $this->actingAs(User::factory()->create())
         ->get('/perfil')
         ->assertOk()
@@ -45,14 +45,14 @@ test('meu perfil fica destacado em /perfil', function () {
         ->and(navLinkIsActive($html, 'Início'))->toBeFalse();
 });
 
-test('o rodapé exibe a versão configurada da aplicação', function () {
+test('the footer shows the app\'s configured version', function () {
     $this->actingAs(User::factory()->create())
         ->get('/')
         ->assertOk()
         ->assertSee(config('app.version'));
 });
 
-test('a barra de carregamento global está presente no shell', function () {
+test('the global loading bar is present in the shell', function () {
     $this->actingAs(User::factory()->create())
         ->get('/')
         ->assertOk()

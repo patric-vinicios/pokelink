@@ -30,7 +30,7 @@ beforeEach(function () {
     $this->actingAs(User::factory()->create());
 });
 
-test('a busca por nome é case e acento insensível e retorna correspondências parciais', function () {
+test('name search is case- and accent-insensitive and returns partial matches', function () {
     Pokemon::factory()->create(['number' => 4, 'name' => 'charmander', 'slug' => 'charmander']);
     Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
 
@@ -40,7 +40,7 @@ test('a busca por nome é case e acento insensível e retorna correspondências 
         ->assertDontSee('bulbasaur');
 });
 
-test('selecionar um tipo restringe os resultados ao pivot', function () {
+test('selecting a type restricts results to the pivot', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
 
@@ -56,7 +56,7 @@ test('selecionar um tipo restringe os resultados ao pivot', function () {
         ->assertDontSee('squirtle');
 });
 
-test('nome e tipo combinados usam semântica AND', function () {
+test('name and type combined use AND semantics', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
 
@@ -81,7 +81,7 @@ test('nome e tipo combinados usam semântica AND', function () {
         ->assertDontSee('bulbasaur');
 });
 
-test('qualquer mudança de filtro reseta a paginação para a página 1', function () {
+test('any filter change resets pagination to page 1', function () {
     Pokemon::factory()
         ->count(25)
         ->sequence(fn ($sequence) => ['number' => $sequence->index + 1])
@@ -100,7 +100,7 @@ test('qualquer mudança de filtro reseta a paginação para a página 1', functi
     expect($component->get('paginators.page'))->toBe(1);
 });
 
-test('uma busca sem correspondência mostra o estado vazio nomeando o termo e o botão limpar filtros', function () {
+test('a search with no matches shows the empty state naming the term and the clear-filters button', function () {
     Pokemon::factory()->create(['number' => 1, 'name' => 'bulbasaur', 'slug' => 'bulbasaur']);
 
     Volt::test('pages.pokemon.search')
@@ -109,7 +109,7 @@ test('uma busca sem correspondência mostra o estado vazio nomeando o termo e o 
         ->assertSee('Limpar filtros');
 });
 
-test('limpar filtros reseta busca, tipo e página em um único round-trip', function () {
+test('clearing filters resets search, type, and page in a single round-trip', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     Pokemon::factory()
         ->count(25)
@@ -137,7 +137,7 @@ test('limpar filtros reseta busca, tipo e página em um único round-trip', func
         ->and($component->get('paginators.page'))->toBe(1);
 });
 
-test('os filtros ativos são refletidos na url e recarregar restaura o mesmo resultado', function () {
+test('active filters are reflected in the url and reloading restores the same result', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     $water = Type::factory()->create(['slug' => 'water', 'label_pt' => 'água']);
 
@@ -157,7 +157,7 @@ test('os filtros ativos são refletidos na url e recarregar restaura o mesmo res
         ->assertDontSee('squirtle');
 });
 
-test('com acesso de rede bloqueado, busca, filtro de tipo e paginação continuam funcionando', function () {
+test('with network access blocked, search, type filter, and pagination keep working', function () {
     $fire = Type::factory()->create(['slug' => 'fire', 'label_pt' => 'fogo']);
     Pokemon::factory()
         ->count(25)
@@ -174,14 +174,14 @@ test('com acesso de rede bloqueado, busca, filtro de tipo e paginação continua
     Http::assertNothingSent();
 });
 
-test('com o catálogo vazio, a área de busca mostra o estado de sincronização', function () {
+test('with an empty catalog, the search area shows the syncing state', function () {
     $this->get('/')
         ->assertOk()
         ->assertSee('Catálogo sincronizando... isso leva menos de um minuto.')
         ->assertSee('wire:poll.5s', false);
 });
 
-test('o select de tipo é populado com os 18 tipos e seus rótulos em pt-BR', function () {
+test('the type select is populated with the 18 types and their pt-BR labels', function () {
     fakePokeApiCatalog(entries: [
         ['number' => 1, 'name' => 'bulbasaur'],
     ]);
@@ -196,7 +196,7 @@ test('o select de tipo é populado com os 18 tipos e seus rótulos em pt-BR', fu
         ->each(fn (string $label) => $component->assertSee($label));
 });
 
-test('um pokémon presente na tabela local é encontrável por um fragmento do nome', function () {
+test('a pokémon present in the local table is findable by a name fragment', function () {
     fakePokeApiCatalog(entries: [
         ['number' => 1, 'name' => 'bulbasaur'],
         ['number' => 4, 'name' => 'charmander'],

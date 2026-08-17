@@ -3,7 +3,7 @@
 use App\Models\Conversation;
 use App\Models\User;
 
-test('um participante é autorizado no canal da própria conversa', function () {
+test('a participant is authorized on their own conversation\'s channel', function () {
     useReverbBroadcaster();
 
     $a = User::factory()->create();
@@ -17,7 +17,7 @@ test('um participante é autorizado no canal da própria conversa', function () 
         ])->assertOk();
 });
 
-test('um usuário que não participa é negado no canal da conversa', function () {
+test('a non-participating user is denied on the conversation channel', function () {
     useReverbBroadcaster();
 
     $a = User::factory()->create();
@@ -32,7 +32,7 @@ test('um usuário que não participa é negado no canal da conversa', function (
         ])->assertForbidden();
 });
 
-test('qualquer usuário autenticado é autorizado no canal de presença', function () {
+test('any authenticated user is authorized on the presence channel', function () {
     useReverbBroadcaster();
 
     $user = User::factory()->create();
@@ -50,7 +50,7 @@ test('qualquer usuário autenticado é autorizado no canal de presença', functi
     expect($channelData['user_info']['id'])->toBe($user->id);
 });
 
-test('um convidado não é autorizado em nenhum dos dois canais', function () {
+test('a guest is authorized on neither channel', function () {
     useReverbBroadcaster();
 
     $a = User::factory()->create();

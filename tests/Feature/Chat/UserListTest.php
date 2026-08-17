@@ -5,7 +5,7 @@ use App\Models\Message;
 use App\Models\User;
 use Livewire\Volt\Volt;
 
-test('a lista de conversas exclui o próprio usuário', function () {
+test('the conversation list excludes the current user', function () {
     $me = User::factory()->create(['name' => 'Ana']);
     User::factory()->create(['name' => 'Bob']);
 
@@ -14,7 +14,7 @@ test('a lista de conversas exclui o próprio usuário', function () {
         ->assertSee('Bob');
 });
 
-test('usuários com mensagem mais recente aparecem primeiro, o restante em ordem alfabética', function () {
+test('users with the most recent message appear first, the rest in alphabetical order', function () {
     $me = User::factory()->create();
     $noConversationZ = User::factory()->create(['name' => 'Zelda']);
     $noConversationA = User::factory()->create(['name' => 'Alan']);
@@ -28,7 +28,7 @@ test('usuários com mensagem mais recente aparecem primeiro, o restante em ordem
         ->assertSeeInOrder(['Recent Contact', 'Older Contact', 'Alan', 'Zelda']);
 });
 
-test('o filtro por nome restringe a lista', function () {
+test('the name filter restricts the list', function () {
     $me = User::factory()->create();
     User::factory()->create(['name' => 'Bulbasaur Fan']);
     User::factory()->create(['name' => 'Charmander Fan']);
@@ -39,7 +39,7 @@ test('o filtro por nome restringe a lista', function () {
         ->assertDontSee('Charmander Fan');
 });
 
-test('a lista pagina a cada 30 usuários', function () {
+test('the list paginates every 30 users', function () {
     $me = User::factory()->create();
     User::factory()->count(35)->create();
 
@@ -52,7 +52,7 @@ test('a lista pagina a cada 30 usuários', function () {
     expect($component->viewData('users'))->toHaveCount(5);
 });
 
-test('o contador de não lidas aparece por conversa e satura em 99+', function () {
+test('the unread counter appears per conversation and caps at 99+', function () {
     $me = User::factory()->create();
     $chatty = User::factory()->create(['name' => 'Chatty']);
     $quiet = User::factory()->create(['name' => 'Quiet']);

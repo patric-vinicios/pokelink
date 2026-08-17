@@ -43,7 +43,7 @@ afterEach(function () {
     }
 });
 
-test('index retorna a listagem paginada e extrai o número nacional da URL', function () {
+test('index returns the paginated listing and extracts the national number from the URL', function () {
     Http::fake([
         config('pokeapi.base_uri').'/pokemon*' => Http::response([
             'count' => 2,
@@ -66,7 +66,7 @@ test('index retorna a listagem paginada e extrai o número nacional da URL', fun
         ->and($result->data()['entries'][1]['number'])->toBe(2);
 });
 
-test('typeRoster retorna os membros de um tipo', function () {
+test('typeRoster returns a type\'s members', function () {
     Http::fake([
         config('pokeapi.base_uri').'/type/fire*' => Http::response([
             'name' => 'fire',
@@ -83,7 +83,7 @@ test('typeRoster retorna os membros de um tipo', function () {
         ->and($result->data())->toBe(['type' => 'fire', 'members' => ['charmander', 'vulpix']]);
 });
 
-test('pokemonDetail combina o payload base com o texto da espécie em pt-BR', function () {
+test('pokemonDetail merges the base payload with the pt-BR species text', function () {
     Http::fake([
         config('pokeapi.base_uri').'/pokemon/6*' => Http::response([
             'id' => 6,
@@ -140,7 +140,7 @@ test('pokemonDetail combina o payload base com o texto da espécie em pt-BR', fu
         ->and($data['sprite_url'])->toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png');
 });
 
-test('pokemonDetail funciona sem texto de sabor quando a espécie não tem entrada pt-BR', function () {
+test('pokemonDetail works without flavor text when the species has no pt-BR entry', function () {
     Http::fake([
         config('pokeapi.base_uri').'/pokemon/1*' => Http::response([
             'id' => 1,
@@ -164,7 +164,7 @@ test('pokemonDetail funciona sem texto de sabor quando a espécie não tem entra
         ->and($result->data())->not->toHaveKey('flavor_text');
 });
 
-test('pokemonDetail não chama a espécie quando o payload base não é encontrado', function () {
+test('pokemonDetail does not call the species endpoint when the base payload is not found', function () {
     Http::fake([
         config('pokeapi.base_uri').'/pokemon/9999*' => Http::response(null, 404),
         config('pokeapi.base_uri').'/pokemon-species/9999*' => Http::response(['flavor_text_entries' => []], 200),
@@ -177,7 +177,7 @@ test('pokemonDetail não chama a espécie quando o payload base não é encontra
     Http::assertNotSent(fn ($request) => str_contains($request->url(), 'pokemon-species'));
 });
 
-test('uma falha de conexão é tentada 3 vezes com o backoff configurado e depois reportada como indisponível', function () {
+test('a connection failure is retried 3 times with the configured backoff and then reported as unavailable', function () {
     $attempts = 0;
 
     // A thrown exception short-circuits the fake handler's promise chain before
@@ -196,7 +196,7 @@ test('uma falha de conexão é tentada 3 vezes com o backoff configurado e depoi
     expect(pokeApiLogLines('WARNING'))->toBe(3);
 });
 
-test('um 404 não é retentado', function () {
+test('a 404 is not retried', function () {
     Http::fake(['*' => Http::response(null, 404)]);
 
     $result = pokeApiTestClient()->typeRoster('inexistente');
@@ -205,7 +205,7 @@ test('um 404 não é retentado', function () {
     Http::assertSentCount(1);
 });
 
-test('um 500 é retentado e reportado indisponível após esgotar as tentativas', function () {
+test('a 500 is retried and reported unavailable after exhausting the attempts', function () {
     Http::fake(['*' => Http::response(null, 500)]);
 
     $result = pokeApiTestClient()->typeRoster('fire');
@@ -215,7 +215,7 @@ test('um 500 é retentado e reportado indisponível após esgotar as tentativas'
     expect(pokeApiLogLines('WARNING'))->toBe(3);
 });
 
-test('um 429 esgotado registra a tentativa final como erro', function () {
+test('an exhausted 429 logs the final attempt as an error', function () {
     Http::fake(['*' => Http::response(null, 429)]);
 
     $result = pokeApiTestClient()->typeRoster('fire');
@@ -226,7 +226,7 @@ test('um 429 esgotado registra a tentativa final como erro', function () {
         ->and(pokeApiLogLines('ERROR'))->toBe(1);
 });
 
-test('uma resposta bem-sucedida é escrita no cache e a segunda chamada não faz requisição', function () {
+test('a successful response is written to the cache and the second call makes no request', function () {
     Http::fake(['*' => Http::response(['name' => 'fire', 'pokemon' => []], 200)]);
 
     $client = pokeApiTestClient();
@@ -242,7 +242,7 @@ test('uma resposta bem-sucedida é escrita no cache e a segunda chamada não faz
     expect($ttl)->toBeGreaterThan(3600);
 });
 
-test('um resultado não encontrado é cacheado por 5 minutos, não 24 horas', function () {
+test('a not-found result is cached for 5 minutes, not 24 hours', function () {
     Http::fake(['*' => Http::response(null, 404)]);
 
     $client = pokeApiTestClient();
@@ -257,7 +257,7 @@ test('um resultado não encontrado é cacheado por 5 minutos, não 24 horas', fu
     expect($ttl)->toBeGreaterThan(0)->toBeLessThanOrEqual(300);
 });
 
-test('um corpo malformado é tratado como indisponível e nada é escrito no cache', function () {
+test('a malformed body is treated as unavailable and nothing is written to the cache', function () {
     Http::fake(['*' => Http::response('isto não é json', 200)]);
 
     $result = pokeApiTestClient()->typeRoster('fire');
@@ -267,14 +267,14 @@ test('um corpo malformado é tratado como indisponível e nada é escrito no cac
     expect(Cache::store('redis')->has('pokeapi:type:fire'))->toBeFalse();
 });
 
-test('nenhuma tentativa ultrapassa o orçamento de tempo configurado', function () {
+test('no attempt exceeds the configured time budget', function () {
     expect(config('pokeapi.connect_timeout'))->toBe(5)
         ->and(config('pokeapi.timeout'))->toBe(10)
         ->and(config('pokeapi.retry.times'))->toBe(3)
         ->and(config('pokeapi.retry.backoff_ms'))->toBe([200, 400, 800]);
 });
 
-test('com Redis indisponível a requisição ainda é bem-sucedida e a falha de cache é logada no máximo uma vez por minuto', function () {
+test('with Redis unavailable the request still succeeds and the cache failure is logged at most once per minute', function () {
     $realFileStore = Cache::store('file');
 
     Cache::shouldReceive('store')
@@ -300,7 +300,7 @@ test('com Redis indisponível a requisição ainda é bem-sucedida e a falha de 
     expect(substr_count(File::get(pokeApiLogPath()), 'Cache do PokeAPI indisponível'))->toBe(1);
 });
 
-test('após atingir o limite de falhas consecutivas o circuito abre e a próxima chamada não tenta a rede', function () {
+test('after reaching the consecutive-failure limit the circuit opens and the next call does not hit the network', function () {
     Cache::store('redis')->put('pokeapi:circuit:failures', 4, 60);
 
     Http::fake(['*' => Http::response(null, 500)]);
@@ -318,7 +318,7 @@ test('após atingir o limite de falhas consecutivas o circuito abre e a próxima
     Http::assertSentCount(3);
 });
 
-test('o circuito fecha novamente após o fim do cooldown', function () {
+test('the circuit closes again after the cooldown ends', function () {
     Cache::store('redis')->put('pokeapi:circuit:open', true, 1);
     sleep(2);
 
@@ -330,7 +330,7 @@ test('o circuito fecha novamente após o fim do cooldown', function () {
     Http::assertSentCount(1);
 });
 
-test('o rate limiter aguarda a janela quando a espera cabe no orçamento da requisição', function () {
+test('the rate limiter waits out the window when the wait fits the request\'s budget', function () {
     RateLimiter::shouldReceive('tooManyAttempts')->once()->andReturn(true);
     RateLimiter::shouldReceive('availableIn')->once()->andReturn(1);
     RateLimiter::shouldReceive('hit')->once();
@@ -346,7 +346,7 @@ test('o rate limiter aguarda a janela quando a espera cabe no orçamento da requ
     Http::assertSentCount(1);
 });
 
-test('o rate limiter reporta indisponível quando a espera excederia o orçamento', function () {
+test('the rate limiter reports unavailable when the wait would exceed the budget', function () {
     RateLimiter::shouldReceive('tooManyAttempts')->once()->andReturn(true);
     RateLimiter::shouldReceive('availableIn')->once()->andReturn(11);
 

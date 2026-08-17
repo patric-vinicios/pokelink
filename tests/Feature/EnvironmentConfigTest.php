@@ -165,7 +165,7 @@ function exampleEnv(): array
     return $pairs;
 }
 
-test('o .env.example contém todas as chaves lidas pela aplicação', function () {
+test('the .env.example contains every key the application reads', function () {
     $shipped = array_keys(exampleEnv());
 
     $required = array_filter(configuredEnvKeys(), function (string $key) {
@@ -187,7 +187,7 @@ test('o .env.example contém todas as chaves lidas pela aplicação', function (
     expect($missing)->toBe([], 'chaves ausentes no .env.example: '.implode(', ', $missing));
 });
 
-test('o .env.example entrega todas as chaves do contrato documentado', function () {
+test('the .env.example delivers every key in the documented contract', function () {
     // Section 5 of the F01 spec — the groups the README promises.
     $contract = [
         'APP_NAME', 'APP_ENV', 'APP_KEY', 'APP_DEBUG', 'APP_URL', 'APP_LOCALE',
@@ -212,7 +212,7 @@ test('o .env.example entrega todas as chaves do contrato documentado', function 
     expect($missing)->toBe([], 'chaves do contrato ausentes: '.implode(', ', $missing));
 });
 
-test('o .env.example não contém placeholders que exigem edição manual', function () {
+test('the .env.example contains no placeholders that require manual editing', function () {
     $placeholders = [];
     $empty = [];
 
@@ -234,7 +234,7 @@ test('o .env.example não contém placeholders que exigem edição manual', func
     expect($empty)->toBe(['APP_KEY']);
 });
 
-test('as conexões de cache, fila e broadcast apontam para os serviços do compose', function () {
+test('the cache, queue, and broadcast connections point to the compose services', function () {
     // Read the contract file rather than the resolved config: phpunit.xml
     // deliberately swaps these drivers out for array/sync while testing.
     $env = exampleEnv();
@@ -252,7 +252,7 @@ test('as conexões de cache, fila e broadcast apontam para os serviços do compo
         ->and($env['REVERB_SERVER_HOST'])->toBe('0.0.0.0');
 });
 
-test('o locale da aplicação é pt_BR', function () {
+test('the application locale is pt_BR', function () {
     expect(config('app.locale'))->toBe('pt_BR')
         ->and(config('app.fallback_locale'))->toBe('pt_BR')
         ->and(config('app.timezone'))->toBe('America/Sao_Paulo');

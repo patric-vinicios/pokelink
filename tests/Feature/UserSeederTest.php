@@ -24,7 +24,7 @@ const DOCUMENTED_ACCOUNTS = [
     'user@pokelink.test' => 'password',
 ];
 
-test('o seeder cria exatamente duas contas documentadas', function () {
+test('the seeder creates exactly the two documented accounts', function () {
     $this->seed(UserSeeder::class);
 
     expect(User::count())->toBe(2);
@@ -34,7 +34,7 @@ test('o seeder cria exatamente duas contas documentadas', function () {
     }
 });
 
-test('as senhas são persistidas como hash bcrypt', function () {
+test('passwords are persisted as a bcrypt hash', function () {
     $this->seed(UserSeeder::class);
 
     foreach (DOCUMENTED_ACCOUNTS as $email => $plaintext) {
@@ -47,7 +47,7 @@ test('as senhas são persistidas como hash bcrypt', function () {
     }
 });
 
-test('executar o seeder duas vezes não duplica contas', function () {
+test('running the seeder twice does not duplicate accounts', function () {
     $this->seed(UserSeeder::class);
     $this->seed(UserSeeder::class);
 
@@ -55,7 +55,7 @@ test('executar o seeder duas vezes não duplica contas', function () {
         ->and(User::where('email', 'admin@pokelink.test')->count())->toBe(1);
 });
 
-test('ambas as contas conseguem autenticar com as credenciais do README', function () {
+test('both accounts can authenticate with the README credentials', function () {
     $this->seed(UserSeeder::class);
 
     foreach (DOCUMENTED_ACCOUNTS as $email => $password) {
@@ -65,7 +65,7 @@ test('ambas as contas conseguem autenticar com as credenciais do README', functi
     }
 });
 
-test('o DatabaseSeeder executa sem depender de rede', function () {
+test('the DatabaseSeeder runs without depending on the network', function () {
     // Seeding runs inside the container entrypoint, before the application
     // serves its first request — a stray HTTP call there would put the whole
     // boot at the mercy of a third party. The seeder only enqueues F06's
