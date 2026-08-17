@@ -4,7 +4,7 @@
 
 PokéLink is a full-stack Laravel web application that turns the public PokeAPI catalog into a private, authenticated experience where each user searches Pokémon, inspects their details, curates a personal favorites collection, and talks in real time with other users of the platform. Everything except login and registration lives behind authentication, and every piece of user-owned data — favorites, profile, conversations — is strictly scoped to its owner.
 
-The product serves two audiences at once. For the **Pokémon enthusiast**, it is a fast, responsive catalog: type-to-search over ~1302 Pokémon with 300 ms debounce, paginated result cards, rich detail pages, one-click favoriting, and a direct-message chat that updates without page reloads. For the **evaluating engineer**, it is a demonstration of engineering judgment: a resilient PokeAPI integration (timeout, retry with exponential backoff, rate limiting, Redis cache), a locally synchronized catalog so the product keeps working when the third-party API is down, Eloquent modeling with an idempotent N:N favorites relationship, authorization policies that close IDOR gaps, and a Pest suite covering the critical paths.
+The product serves two audiences at once. For the **Pokémon enthusiast**, it is a fast, responsive catalog: type-to-search over ~1350 Pokémon with 300 ms debounce, paginated result cards, a rich detail modal, one-click favoriting, and a direct-message chat that updates without page reloads. For the **evaluating engineer**, it is a demonstration of engineering judgment: a resilient PokeAPI integration (timeout, retry with exponential backoff, rate limiting, Redis cache), a locally synchronized catalog so the product keeps working when the third-party API is down, Eloquent modeling with an idempotent N:N favorites relationship, authorization policies that close IDOR gaps, and a Pest suite covering the critical paths.
 
 Architecturally, a queued job syncs a lightweight catalog (national number, name, types, sprite) from PokeAPI into MySQL at seed time, making search and pagination pure Eloquent queries — fast, predictable, and immune to upstream outages. Full Pokémon details are fetched on demand through a hardened HTTP client and cached in Redis for 24 hours. Real-time messaging runs over Laravel Reverb with Livewire and Echo on private and presence channels. The entire stack — app, MySQL, Redis, queue worker, and WebSocket server — boots from a single `docker compose up -d`, migrates and seeds itself, and presents a login screen with documented credentials.
 
@@ -145,20 +145,20 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 
 ### F08. Results List and Pagination
 - As a user, I want results as cards with image, name, national number, and types so that I can recognize a Pokémon at a glance
-- As a user, I want results paginated so that a 1302-item catalog never floods the page
+- As a user, I want results paginated so that a 1300+-item catalog never floods the page
 - As a user, I want to click any card to open its details so that browsing feels direct
 - As a user, I want skeleton placeholders while results load so that the layout does not jump
-- As a user, I want to return from a detail page to the same page and filters I left so that I do not lose my position
+- As a user, I want to close a Pokémon's details and land exactly where I was so that I do not lose my position
 
 ### F09. Pokémon Details
-- As a user, I want a detail page with image, name, number, types, abilities, base stats, height, and weight so that I get the full picture in one place
-- As a user, I want the page to open instantly for a Pokémon I already viewed so that revisiting is not penalized
+- As a user, I want a Pokémon details view with image, name, number, types, abilities, base stats, height, and weight so that I get the full picture in one place
+- As a user, I want the details to open instantly for a Pokémon I already viewed so that revisiting is not penalized
 - As a user, I want a clear, non-technical message when the detail cannot be loaded so that I understand it is temporary
-- As a user, I want a "não encontrado" page for a Pokémon that does not exist so that a bad URL does not look like a crash
+- As a user, I want a "não encontrado" state for a Pokémon that does not exist so that a bad slug does not look like a crash
 
 ### F10. Favorites
 - As a user, I want to favorite a Pokémon directly from a result card so that I do not have to open it first
-- As a user, I want to favorite or unfavorite from the detail page so that the action is available wherever I am
+- As a user, I want to favorite or unfavorite from the detail modal so that the action is available wherever I am
 - As a user, I want the star to change state immediately so that I get instant confirmation
 - As a user, I want a dedicated Favoritos page so that my collection has a permanent home
 - As a user, I want to filter within my favorites so that a large collection stays navigable
@@ -218,6 +218,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 **Capabilities:**
 - Built on Laravel Breeze with the Livewire stack; session-based authentication with database-backed sessions
 - Every route except `/login`, `/register`, and static assets sits behind the `auth` middleware; authenticated users hitting `/login` or `/register` are redirected to `/`
+- The four main authenticated routes (`/`, `/pokemon/{slug}`, `/favoritos`, `/chat`, `/perfil`) additionally run `auth.session`, which compares the session's stored password hash against the live value on every request — this is what makes F11's other-session invalidation after a password change take effect everywhere, not only on `/perfil`
 - Login accepts e-mail and password plus an optional "lembrar-me" checkbox extending the session to 30 days
 - Failed attempts are throttled at 5 per minute per e-mail + IP combination; exceeding the limit locks the pair for 60 seconds
 - Failure messages are deliberately generic ("As credenciais informadas não conferem.") and never reveal whether the e-mail exists
@@ -258,7 +259,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - A single Blade layout wraps every authenticated page: fixed top navigation bar, main content container capped at 1280px, and a footer showing the application version
 - Navigation exposes exactly 4 destinations: Início (`/`), Favoritos (`/favoritos`), Chat (`/chat`), and Meu Perfil (`/perfil`), plus a user menu with the current user's name and the logout action
 - The active destination is highlighted by route pattern, so `/pokemon/{slug}` keeps Início highlighted
-- Below 768px the navigation collapses into an Alpine.js-driven hamburger menu; cards reflow from 4 columns (≥1280px) to 3 (≥1024px), 2 (≥640px), and 1 below that
+- Below 1024px the navigation collapses into an Alpine.js-driven hamburger menu; cards reflow from 4 columns (≥1280px) to 3 (≥1024px), 2 (≥640px), and 1 below that
 - A global `wire:loading` progress bar appears at the top of the viewport for any Livewire round-trip exceeding 200 ms
 - Tailwind CSS drives all styling; shared UI primitives (button, input, card, badge, modal, empty state, toast) are extracted as Blade components and reused by every feature
 - Toast notifications appear top-right, auto-dismiss after 4 seconds, and stack to a maximum of 3
@@ -287,7 +288,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - Every failure logs endpoint, HTTP status, attempt number, and elapsed milliseconds at `warning`; a short-circuit logs at `error`
 - The client returns one of three explicit outcomes — success with payload, not found, or unavailable — so callers never have to interpret exceptions
 
-**Experience:** This feature has no direct interface. Its behavior is observable through the states it produces elsewhere: instant repeat views (cache hit), a temporary unavailability banner on the detail page (unavailable), and a dedicated "não encontrado" screen (not found). Response times for cached resources stay under 20 ms; uncached detail fetches complete in 200–800 ms typically and never exceed 10 seconds.
+**Experience:** This feature has no direct interface. Its behavior is observable through the states it produces elsewhere: instant repeat views (cache hit), a temporary unavailability warning inside the detail modal (unavailable), and a "não encontrado" state in that same modal (not found). Response times for cached resources stay under 20 ms; uncached detail fetches complete in 200–800 ms typically and never exceed 10 seconds.
 
 **Error Handling:**
 - Connection refused or DNS failure: 3 attempts with backoff, then the unavailable outcome, logged with the endpoint — no exception escapes to the user
@@ -313,7 +314,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 
 **Capabilities:**
 - The `pokemon` table stores national number (primary key), name, slug, sprite URL, and timestamps; types are normalized into a `types` table and a `pokemon_type` pivot, so a Pokémon can carry 1 or 2 types
-- The sync makes exactly 19 upstream calls: 1 index call (`/pokemon?limit=100000&offset=0`) and 18 type roster calls (`/type/{name}`), covering all ~1302 Pokémon in the catalog
+- The sync makes exactly 19 upstream calls: 1 index call (`/pokemon?limit=100000&offset=0`) and 18 type roster calls (`/type/{name}`), covering all ~1350 Pokémon currently in PokeAPI's catalog (the exact count grows as PokeAPI adds entries; the sync is unbounded by any hardcoded total)
 - Sprite URLs are derived deterministically from the national number using the official artwork path, so no per-Pokémon detail call is needed at sync time
 - The job is dispatched by the database seeder onto the `default` queue and is processed by the Horizon worker; the seeder itself never blocks on network I/O
 - Writes go through `upsert` on the national number, making the job fully idempotent — running it twice yields the same row count and updates nothing that has not changed
@@ -322,7 +323,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - A complete sync from an empty database finishes in under 60 seconds
 - The 18 type names are stored with their pt-BR labels (fogo, água, planta, elétrico, and so on) alongside the canonical English slugs used by PokeAPI
 
-**Experience:** The reviewer sees the sync happen without triggering it: after `docker compose up -d`, the seeder dispatches the job, and Horizon at `/horizon` shows it moving from pending to completed within a minute. During that window the search screen shows the "catálogo sincronizando..." state with a hint to check Horizon, and it refreshes automatically once rows exist. Running `php artisan pokemon:sync` a second time prints "1302 Pokémon sincronizados (0 criados, 1302 atualizados)" and creates no duplicates.
+**Experience:** The reviewer sees the sync happen without triggering it: after `docker compose up -d`, the seeder dispatches the job, and Horizon at `/horizon` shows it moving from pending to completed within a minute. During that window the search screen shows the "catálogo sincronizando..." state with a hint to check Horizon, and it refreshes automatically once rows exist. Running `php artisan pokemon:sync` a second time prints "1350 Pokémon sincronizados (0 criados, 1350 atualizados)" and creates no duplicates.
 
 **Error Handling:**
 - PokeAPI unavailable during sync: the job fails, retries 3 times with 10/30/60-second backoff, and lands in `failed_jobs` with the failing endpoint; the application stays usable and search shows the empty-catalog state
@@ -364,7 +365,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - F07: filtered and ordered catalog query (matched rows with national number, name, slug, types, sprite URL, total match count, active filter state)
 
 **Provides:**
-- Selected Pokémon slug and page-return context (current page number, active filters) (used by F09)
+- Selected Pokémon slug, carried via the `open-pokemon` browser event (used by F09); since the modal opens over the grid with no route change, no page-return context needs to be handed off
 - Rendered result card slots for the favorite toggle (Pokémon national number, slug, name) (used by F10)
 
 **Capabilities:**
@@ -374,34 +375,34 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - The paginator renders previous/next controls plus numbered links with ellipsis, and displays "Exibindo X–Y de Z"
 - Requesting a page beyond the last one redirects to the last valid page rather than rendering an empty grid
 - Sprite images are lazy-loaded (`loading="lazy"`) with a fixed aspect-ratio box, so the grid never reflows as images arrive; a broken sprite URL falls back to a neutral silhouette placeholder
-- The whole card is clickable and keyboard-focusable, navigating to `/pokemon/{slug}` while carrying the current page and filters so the detail page can offer an accurate return link
+- The whole card is clickable and keyboard-focusable; clicking dispatches an `open-pokemon` browser event carrying the slug to the detail modal component (F09), which opens over the current grid — the search/favorites page itself is never left, so the current page number and filters need no explicit hand-off
 - During a filter or page change, 20 skeleton cards occupy the grid so page height stays stable
 
-**Experience:** The default view shows 20 cards from the top of the catalog with "Exibindo 1–20 de 1302" below the grid. Clicking page 3 scrolls to the top of the results and swaps the grid contents while the skeleton is visible for the duration of the round-trip. Hovering a card raises it slightly and reveals the favorite star in the top-right corner. Clicking anywhere else on the card opens the detail page. With filters active, the paginator recalculates against the filtered total, and the URL keeps `?q=`, `?tipo=`, and `?page=` together.
+**Experience:** The default view shows 20 cards from the top of the catalog with "Exibindo 1–20 de 1350" below the grid. Clicking page 3 scrolls to the top of the results and swaps the grid contents while the skeleton is visible for the duration of the round-trip. Hovering a card raises it slightly and reveals the favorite star in the top-right corner. Clicking anywhere else on the card opens the Pokémon's details in a modal layered on top of the grid. With filters active, the paginator recalculates against the filtered total, and the URL keeps `?q=`, `?tipo=`, and `?page=` together.
 
 ### F09. Pokémon Details
 
 **Consumes:**
 - F05: full Pokémon detail payloads (national number, name, sprites, types, abilities, base stats, height, weight, species flavor text)
-- F08: selected Pokémon slug and page-return context (current page number, active filters)
+- F08: selected Pokémon slug, carried via the `open-pokemon` browser event
 
 **Provides:**
-- Detail page header slot for the favorite toggle (Pokémon national number, slug, name, sprite URL) (used by F10)
+- Detail modal header slot for the favorite toggle (Pokémon national number, slug, name, sprite URL) (used by F10)
 
 **Capabilities:**
-- Route `/pokemon/{slug}` resolves the slug against the local catalog first; the full payload is then requested from the PokeAPI client, which serves it from the 24-hour Redis cache when warm
-- The page displays: official artwork at 475px, name, zero-padded national number, type badges, up to 6 abilities with hidden abilities marked "(oculta)", the 6 base stats (HP, Ataque, Defesa, Ataque Especial, Defesa Especial, Velocidade) as labeled bars scaled against 255, height in metres and weight in kilograms converted from the decimetre/hectogram units PokeAPI returns, and the pt-BR species flavor text when available
+- Implemented as a modal (`livewire:pokemon.detail-modal`), not a standalone routed page: a card dispatches an `open-pokemon` event carrying the slug, the modal resolves it against the local catalog first for an instant header (sprite, name, number, types), then lazy-loads the full payload from the PokeAPI client on `wire:init`, which serves it from the 24-hour Redis cache when warm. `/pokemon/{slug}` still exists as a route, kept for shareable/bookmarkable deep links and backward compatibility — it redirects to `/?pokemon={slug}`, and the search page's `mount()` reads that query param to auto-open the same modal on load
+- The modal displays, across three tabs (Visão geral / Estatísticas / Movimentos): official artwork, name, zero-padded national number, type badges, height in metres and weight in kilograms converted from the decimetre/hectogram units PokeAPI returns, base experience, genus, and the pt-BR species flavor text on the "Visão geral" tab alongside 4 headline stats (HP, Ataque, Defesa, Velocidade), a computed type-effectiveness ("Fraquezas") panel driven by `config('pokemon.type_matchups')`, up to 6 abilities with hidden abilities marked "(oculta)", and an evolution chain when one exists; all 6 base stats (HP, Ataque, Defesa, Ataque Especial, Defesa Especial, Velocidade) as labeled bars on the "Estatísticas" tab; a move list on the "Movimentos" tab
 - Base stat bars are color-coded in 3 bands: below 60, 60–99, and 100 or above
-- A "Voltar aos resultados" link reconstructs the origin URL including page number and filters; arriving directly by URL links back to `/` instead
+- Because the modal opens over the results grid without a route change, there is no "Voltar aos resultados" navigation to reconstruct — closing the modal (✕ button) simply returns to the exact page, scroll position, and filters the user never left
 - A cached detail renders in under 100 ms server-side; an uncached one typically takes 200–800 ms and shows a skeleton in the meantime
 - A slug absent from the local catalog still attempts an upstream lookup before concluding it does not exist, so a Pokémon added to PokeAPI after the last sync is still viewable
 
-**Experience:** Clicking a card opens the detail page with the artwork on the left and the data panel on the right at desktop widths, stacking vertically below 768px. The favorite star sits beside the name. Stat bars animate from 0 to their value over 400 ms on first paint. Opening the same Pokémon a second time renders immediately from cache, with no visible loading state. When the payload cannot be loaded, the data panel is replaced by a bordered warning block: "Não foi possível carregar os detalhes agora. O serviço de dados está temporariamente indisponível." with a "Tentar novamente" button; the name, number, types, and sprite from the local catalog remain on screen, so the page is never blank.
+**Experience:** Clicking a card opens the modal with the artwork and quick facts on the left and the tabbed data panel on the right at desktop widths, stacking vertically on narrower viewports. The favorite star sits beside the name. Opening the same Pokémon a second time renders immediately from cache, with no visible loading state. When the payload cannot be loaded, the tab content is replaced by a compact warning block: "Não foi possível carregar os detalhes agora." with a "Tentar novamente" button; if even the local catalog has no row for the slug, the whole modal instead shows "Não foi possível carregar os detalhes agora. O serviço de dados está temporariamente indisponível." The name, number, types, and sprite already resolved locally remain visible while only the upstream-sourced sections retry, so the modal is never blank.
 
 **Error Handling:**
-- PokeAPI unavailable: the warning block described above, with local catalog data still rendered and a retry button that re-runs the fetch without a full page reload
-- Slug not present locally and returning 404 upstream: a dedicated 404 page reading "Pokémon não encontrado." with a link back to the search
-- Malformed upstream payload missing `stats` or `abilities`: the sections that cannot be rendered are omitted with "Informação indisponível." rather than throwing on a missing array key
+- PokeAPI unavailable: the warning block described above, with any locally-resolved header data still rendered and a retry button that re-runs the fetch without closing the modal
+- Slug not present locally and returning 404 upstream: the modal shows "Pokémon não encontrado." in place of the detail content, rather than a dedicated page or a stack trace
+- Malformed upstream payload missing `stats` or `abilities`: the sections that cannot be rendered show "Informação indisponível." rather than throwing on a missing array key
 - Request exceeding the 10-second budget: the unavailable state is shown instead of an indefinite spinner
 - Sprite URL returning 404: the neutral silhouette placeholder is shown so the layout keeps its shape
 
@@ -410,13 +411,13 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 **Consumes:**
 - F06: local Pokémon catalog rows (national number, name, slug, types, sprite URL)
 - F08: rendered result card slots for the favorite toggle (Pokémon national number, slug, name)
-- F09: detail page header slot for the favorite toggle (Pokémon national number, slug, name, sprite URL)
+- F09: detail modal header slot for the favorite toggle (Pokémon national number, slug, name, sprite URL)
 
 **Core Scope:**
-- An idempotent favorite toggle available on result cards and the detail page, a dedicated `/favoritos` page listing the user's collection, and removal from that page
+- An idempotent favorite toggle available on result cards and the detail modal, a dedicated `/favoritos` page listing the user's collection, and removal from that page
 
 **Full Scope additions:**
-- Text filtering within favorites, sort control, and a confirmation step on removal
+- Text filtering and a sort control (mais recentes, nome, número) within favorites
 
 **Capabilities:**
 - Persistence is a many-to-many Eloquent relationship: `users` N:N `pokemon` through a `favorites` pivot carrying `user_id`, `pokemon_id`, and `created_at`
@@ -429,7 +430,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - The navigation shows the current favorite count as a badge, capped at "99+"
 - Favorites survive logout and are visible only to their owner: two accounts favoriting the same Pokémon produce two independent pivot rows
 
-**Experience:** Hovering a result card reveals an outlined star in its top-right corner. Clicking it fills the star gold instantly and shows the toast "Adicionado aos favoritos." while the write happens in the background; the navigation badge increments in the same round-trip. Clicking a filled star empties it and shows "Removido dos favoritos." The detail page carries the same control beside the name, labeled "Favoritar" or "Remover dos favoritos". The Favoritos page opens with the collection in reverse-chronological order and a filter field at the top; with an empty collection it shows the empty state "Você ainda não favoritou nenhum Pokémon." plus a "Buscar Pokémon" button linking to `/`. Removing an item asks for confirmation in a modal, then fades the card out of the grid without a full page reload.
+**Experience:** Hovering a result card reveals an outlined star in its top-right corner. Clicking it fills the star gold instantly and shows the toast "Adicionado aos favoritos." while the write happens in the background; the navigation badge increments in the same round-trip. Clicking a filled star empties it and shows "Removido dos favoritos." The detail modal carries the same control beside the name. The Favoritos page opens with the collection in reverse-chronological order by default, with a name filter, a type filter, and a sort control ("Mais recentes", "Nome (A-Z)", "Número") at the top; with an empty collection it shows the empty state "Você ainda não favoritou nenhum Pokémon." plus a "Buscar Pokémon" button linking to `/`. Removing an item from either surface is a single click — the same optimistic toggle used to add it, no confirmation step — and the card fades out of the `/favoritos` grid immediately, without a full page reload.
 
 **Error Handling:**
 - Double-click on the star or a duplicated request: `firstOrCreate` plus the unique index yield exactly one row; the interface converges on the filled state with no duplicate toast
@@ -443,7 +444,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 **Capabilities:**
 - Route `/perfil` shows the authenticated user's name, e-mail, and account creation date; the e-mail is displayed read-only
 - Two independent forms with independent submit buttons: "Dados da conta" (name) and "Alterar senha" (current password, new password, confirmation)
-- Name validation lives in a Form Request: required, string, 2–255 characters
+- Name validation lives in a Form Request (`UpdateProfileRequest`): required, string, 2–255 characters
 - Password change requires the current password (validated with the `current_password` rule), a new password of at least 8 characters that is confirmed and different from the current one; the new value is stored as a fresh bcrypt hash
 - After a successful password change, other sessions for the same user are invalidated via `logoutOtherDevices` while the current session stays active
 - Both forms operate exclusively on `auth()->user()`; no user identifier is ever read from the request, and an `UpdateProfilePolicy` gates the update as a second line of defense
@@ -475,7 +476,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - Presence is tracked on a `presence-online` channel; each listed user carries a green dot when connected and "offline" text otherwise, converging within 5 seconds of connect or disconnect
 - A conversation is a `conversations` row with a deterministic participant pair, created on first message via `firstOrCreate` on the ordered user-id pair so two people never end up with two conversations
 - Messages are stored in `messages` (conversation_id, sender_id, body, read_at, timestamps) with a maximum body length of 2000 characters; the composer shows a live counter from 1800 characters onward
-- Every message is persisted inside a transaction and only then broadcast through a `MessageSent` event on the private channel `conversation.{id}`, so a broadcast failure can never produce a message the recipient sees but the database does not have
+- Every message is persisted inside a transaction and only then broadcast through a `MessageSent` event on the private channel `conversation.{id}` — and, so the recipient's user list updates even when that conversation is not open (unread badge, first message of a brand-new conversation), also on their personal private channel `App.Models.User.{id}` — so a broadcast failure can never produce a message the recipient sees but the database does not have
 - Channel authorization in `routes/channels.php` verifies that the authenticated user is one of the two participants; a non-participant subscription is rejected server-side
 - History loads the 30 most recent messages on open, ordered oldest to newest, with older pages fetched 30 at a time when the user scrolls to the top
 - Unread counters count messages where the current user is not the sender and `read_at` is null; opening a conversation marks its visible messages read in a single query, and the badge caps its display at "99+"
@@ -507,9 +508,11 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - Registration coverage: successful creation with a hashed password, duplicate e-mail rejected, short password rejected, mismatched confirmation rejected, plaintext password never persisted
 - Search with cache coverage: a repeated identical search performs 0 outbound calls (`Http::assertSentCount`), a name search returns the matching subset, a type filter constrains through the pivot, filters combine with AND semantics, changing a filter resets pagination to page 1
 - Favorites coverage: favoriting creates exactly 1 pivot row, favoriting the same Pokémon twice still yields 1 row, unfavoriting removes it, the favorites page lists only the authenticated user's rows
-- Authorization (IDOR) coverage: user A removing user B's favorite gets 403 with the row intact, user A reading `/favoritos` never sees user B's Pokémon, user A cannot update user B's profile by injecting a user identifier, a non-participant is denied on `conversation.{id}` channel authorization
+- Authorization (IDOR) coverage: user A removing user B's favorite gets 403 with the row intact, user A reading `/favoritos` never sees user B's Pokémon, user A cannot update user B's profile by injecting a user identifier, a non-participant is denied on `conversation.{id}` channel authorization — the global test config forces `BROADCAST_CONNECTION=null` (whose channel `auth()` is a no-op), so these specific tests opt into a `useReverbBroadcaster()` Pest helper to exercise the real `routes/channels.php` authorization callback instead
 - PokeAPI client coverage: a 500 response is retried 3 times then reported unavailable, a 404 is not retried and is reported not found, a successful response is written to cache and the second call performs no request
 - Model factories exist for `User`, `Pokemon`, `Type`, `Favorite`, `Conversation`, and `Message`, so no test depends on seeded production data
+- Delivered well past the 35-case floor: 189 Pest test cases (760 assertions) across 24 files, running in ~15 seconds
+- Beyond Pest, `gates/*.sh` wraps a static-analysis suite not named anywhere else in this PRD — Pint (style), Larastan/PHPStan level 5, PHP Insights, Deptrac (enforces that only `app/Jobs` depends on `app/Services/PokeApi`), PHPCPD (duplication), and `composer audit` — plus a handful of Playwright visual-regression specs (`tests/Browser/`) for the shell, header, chat, and the pokemon detail modal. `.github/workflows/` runs one job per gate (plus a `boot` job that runs `gates/init.sh` end-to-end) in parallel on every PR — see [`CLAUDE.md`](../CLAUDE.md) for the full breakdown. This CI layer was added after the PRD's original "no CI/CD" call (§7) as a project-level quality investment, not a requirement any user story above asked for
 
 **Experience:** The reviewer runs `docker compose exec app php artisan test` and sees Pest's grouped output by feature file, each test named as a readable sentence ("um usuário não pode remover o favorito de outro usuário"). The run ends green with the total count and elapsed time. `php artisan test --filter=Favorite` narrows to the favorites group for focused inspection.
 
@@ -525,8 +528,9 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 - No avatar upload or public user profiles
 
 **Catalog depth**
-- No evolution chains, moves, items, berries, locations, or generation filters
-- No team builder, battle simulator, damage calculator, or type effectiveness matrix
+- The detail modal (F09) does show a read-only evolution chain, move list, base experience, genus, and a computed type-effectiveness ("Fraquezas") panel for the Pokémon being viewed — these were added after the PRD's original scope call and are documented in F09 above
+- Still out of scope: items, berries, locations, or generation filters
+- No team builder, battle simulator, damage calculator, or interactive/standalone type effectiveness matrix — F09's "Fraquezas" panel is a single Pokémon's computed weaknesses, not a browsable matrix
 - No user-generated content about Pokémon: no ratings, comments, notes, or custom tags on favorites
 
 **Search sophistication**
@@ -544,7 +548,7 @@ Both profiles are impatient with latency and unforgiving of silent failure. They
 **Platform and operations**
 - No native mobile applications, PWA installability, or offline mode
 - No public cloud deployment: delivery is the local `docker-compose` stack, not Railway, Render, or Fly.io
-- No CI/CD pipeline, no production observability stack beyond Horizon, no multi-region or autoscaling concerns
+- No production observability stack beyond Horizon, no multi-region or autoscaling concerns. (CI was in fact added post-hoc as a quality safety net — see the note below — but it stops at running checks on every PR; there is no CD/deploy pipeline)
 - No internationalization: the interface ships in pt-BR only, with no language switcher
 
 ## 8. Dependency Graph
@@ -619,137 +623,137 @@ graph TD
 ## 9. Acceptance Criteria
 
 ### F01. Application Environment and Delivery
-- [ ] `docker compose up -d` starts all 6 services and the login screen answers on `http://localhost:8000` with no further commands
-- [ ] Migrations and seeding run automatically on first boot; a container restart does not reseed or duplicate the two accounts
-- [ ] Logging in with `admin@pokelink.test` / `password` and with `user@pokelink.test` / `password` both succeed using only the README
-- [ ] `.env.example` contains every key the application reads; booting from a straight copy of it requires no manual edit
-- [ ] `docker compose down -v && docker compose up -d` produces a clean, migrated, seeded environment
-- [ ] The entrypoint exits with an explicit Portuguese message when MySQL is not healthy within 60 seconds, instead of failing later with a 500
-- [ ] README documents prerequisites, the boot command, the URL, both credential pairs, technical decisions, and what was left out and why
+- [x] `docker compose up -d` starts all 6 services and the login screen answers on `http://localhost:8000` with no further commands
+- [x] Migrations and seeding run automatically on first boot; a container restart does not reseed or duplicate the two accounts
+- [x] Logging in with `admin@pokelink.test` / `password` and with `user@pokelink.test` / `password` both succeed using only the README
+- [x] `.env.example` contains every key the application reads; booting from a straight copy of it requires no manual edit
+- [x] `docker compose down -v && docker compose up -d` produces a clean, migrated, seeded environment
+- [x] The entrypoint exits with an explicit Portuguese message when MySQL is not healthy within 60 seconds, instead of failing later with a 500
+- [x] README documents prerequisites, the boot command, the URL, both credential pairs, technical decisions, and what was left out and why
 
 ### F02. Authentication and Session Management
-- [ ] A guest opening `/`, `/favoritos`, `/chat`, `/perfil`, or `/pokemon/{slug}` is redirected to `/login`
-- [ ] Login with valid credentials redirects to the originally intended URL, or to `/` when there was none
-- [ ] Login with a wrong password and login with an unregistered e-mail produce the identical generic message
-- [ ] A sixth failed attempt within one minute is blocked with a message showing the remaining lockout seconds
-- [ ] Logout invalidates the session; pressing back afterwards lands on `/login`, not on cached authenticated content
-- [ ] An authenticated user opening `/login` or `/register` is redirected to `/`
-- [ ] "Lembrar-me" keeps the session alive across a browser restart for 30 days
+- [x] A guest opening `/`, `/favoritos`, `/chat`, `/perfil`, or `/pokemon/{slug}` is redirected to `/login`
+- [x] Login with valid credentials redirects to the originally intended URL, or to `/` when there was none
+- [x] Login with a wrong password and login with an unregistered e-mail produce the identical generic message
+- [x] A sixth failed attempt within one minute is blocked with a message showing the remaining lockout seconds
+- [x] Logout invalidates the session; pressing back afterwards lands on `/login`, not on cached authenticated content
+- [x] An authenticated user opening `/login` or `/register` is redirected to `/`
+- [x] "Lembrar-me" keeps the session alive across a browser restart for 30 days
 
 ### F03. User Registration
-- [ ] Registering with a valid name, e-mail, and confirmed password creates the account and logs the user in automatically
-- [ ] The persisted `password` column is a bcrypt hash; the plaintext value appears nowhere in the database or logs
-- [ ] An already-registered e-mail is rejected at field level with a link to login, and no second account is created
-- [ ] A password under 8 characters and a mismatched confirmation are each rejected with a specific pt-BR message
-- [ ] All validation messages render in pt-BR and are attached to the field that caused them
-- [ ] Two rapid submissions of the same form create exactly one user
+- [x] Registering with a valid name, e-mail, and confirmed password creates the account and logs the user in automatically
+- [x] The persisted `password` column is a bcrypt hash; the plaintext value appears nowhere in the database or logs
+- [x] An already-registered e-mail is rejected at field level with a link to login, and no second account is created
+- [x] A password under 8 characters and a mismatched confirmation are each rejected with a specific pt-BR message
+- [x] All validation messages render in pt-BR and are attached to the field that caused them
+- [x] Two rapid submissions of the same form create exactly one user
 
 ### F04. Application Shell and Navigation
-- [ ] Every authenticated page renders the same shell with the 4 destinations Início, Favoritos, Chat, and Meu Perfil
-- [ ] The active destination is highlighted, and `/pokemon/{slug}` keeps Início highlighted
-- [ ] At 375px width the navigation collapses to a hamburger menu exposing the same 4 destinations
-- [ ] The global loading bar appears for any Livewire round-trip longer than 200 ms and disappears on completion
-- [ ] Toasts appear top-right, auto-dismiss after 4 seconds, and never stack more than 3
+- [x] Every authenticated page renders the same shell with the 4 destinations Início, Favoritos, Chat, and Meu Perfil
+- [x] The active destination is highlighted, and `/pokemon/{slug}` keeps Início highlighted
+- [x] At 375px width the navigation collapses to a hamburger menu exposing the same 4 destinations
+- [x] The global loading bar appears for any Livewire round-trip longer than 200 ms and disappears on completion
+- [x] Toasts appear top-right, auto-dismiss after 4 seconds, and never stack more than 3
 
 ### F05. Resilient PokeAPI Client
-- [ ] No file outside the PokeAPI service reaches `pokeapi.co` directly
-- [ ] A request that never connects is retried 3 times with 200/400/800 ms backoff and then reported as unavailable, with no exception surfacing to the user
-- [ ] An HTTP 404 is returned as "not found" on the first attempt, with no retries
-- [ ] A second identical request within the 24-hour TTL performs 0 outbound calls
-- [ ] No single upstream attempt exceeds 10 seconds total or 5 seconds to connect
-- [ ] With Redis stopped, requests still succeed against the upstream and the cache failure is logged at most once per minute
-- [ ] After 5 consecutive failures inside 60 seconds, the next call returns unavailable immediately without spending the retry budget
+- [x] No file outside the PokeAPI service reaches `pokeapi.co` directly
+- [x] A request that never connects is retried 3 times with 200/400/800 ms backoff and then reported as unavailable, with no exception surfacing to the user
+- [x] An HTTP 404 is returned as "not found" on the first attempt, with no retries
+- [x] A second identical request within the 24-hour TTL performs 0 outbound calls
+- [x] No single upstream attempt exceeds 10 seconds total or 5 seconds to connect
+- [x] With Redis stopped, requests still succeed against the upstream and the cache failure is logged at most once per minute
+- [x] After 5 consecutive failures inside 60 seconds, the next call returns unavailable immediately without spending the retry budget
 
 ### F06. Pokémon Catalog Sync
-- [ ] After `docker compose up -d`, the `pokemon` table holds roughly 1302 rows and every row has a name, slug, sprite URL, and at least 1 type
-- [ ] The full sync makes exactly 19 upstream calls and completes in under 60 seconds from an empty database
-- [ ] Running `php artisan pokemon:sync` a second time changes the row count by 0 and creates no duplicates
-- [ ] The job is dispatched by the seeder and visibly processed by the queue worker in Horizon, not executed inline
-- [ ] A failing sync retries 3 times with 10/30/60-second backoff, lands in `failed_jobs`, and leaves the application usable
-- [ ] The 18 types are stored with both their PokeAPI slug and their pt-BR label
+- [x] After `docker compose up -d`, the `pokemon` table holds roughly 1350 rows (the live PokeAPI catalog size at sync time) and every row has a name, slug, sprite URL, and at least 1 type
+- [x] The full sync makes exactly 19 upstream calls and completes in under 60 seconds from an empty database
+- [x] Running `php artisan pokemon:sync` a second time changes the row count by 0 and creates no duplicates
+- [x] The job is dispatched by the seeder and visibly processed by the queue worker in Horizon, not executed inline
+- [x] A failing sync retries 3 times with 10/30/60-second backoff, lands in `failed_jobs`, and leaves the application usable
+- [x] The 18 types are stored with both their PokeAPI slug and their pt-BR label
 
 ### F07. Pokémon Search
-- [ ] Typing an 8-character query fires at most 1 server round-trip after the last keystroke, never one per character
-- [ ] A name search is case-insensitive and matches partial fragments ("char" returns Charmander)
-- [ ] Selecting a type constrains results to Pokémon carrying that type
-- [ ] A name fragment combined with a type returns only rows satisfying both
-- [ ] Any filter change resets pagination to page 1
-- [ ] A search matching nothing shows the empty state naming the term, plus a "Limpar filtros" button
-- [ ] Active filters are reflected in the URL, and reloading that URL restores the identical result set
-- [ ] With outbound network access blocked, search, type filtering, and pagination all still work
-- [ ] With an empty catalog table, the search area shows the syncing state instead of a bare empty list
+- [x] Typing an 8-character query fires at most 1 server round-trip after the last keystroke, never one per character
+- [x] A name search is case-insensitive and matches partial fragments ("char" returns Charmander)
+- [x] Selecting a type constrains results to Pokémon carrying that type
+- [x] A name fragment combined with a type returns only rows satisfying both
+- [x] Any filter change resets pagination to page 1
+- [x] A search matching nothing shows the empty state naming the term, plus a "Limpar filtros" button
+- [x] Active filters are reflected in the URL, and reloading that URL restores the identical result set
+- [x] With outbound network access blocked, search, type filtering, and pagination all still work
+- [x] With an empty catalog table, the search area shows the syncing state instead of a bare empty list
 
 ### F08. Results List and Pagination
-- [ ] Each card shows the sprite, the capitalized name, the zero-padded national number, and one badge per type
-- [ ] Exactly 20 cards render per page and "Exibindo X–Y de Z" matches the active filter's total
-- [ ] The grid renders 4/3/2/1 columns at 1280px/1024px/640px/below without horizontal scrolling
-- [ ] Requesting a page beyond the last redirects to the last valid page instead of an empty grid
-- [ ] Clicking a card opens `/pokemon/{slug}`; the card is reachable and activatable by keyboard
-- [ ] Skeleton cards occupy the grid during filter and page changes, and the page height does not jump
-- [ ] A broken sprite URL renders the silhouette placeholder without breaking the card layout
+- [x] Each card shows the sprite, the capitalized name, the zero-padded national number, and one badge per type
+- [x] Exactly 20 cards render per page and "Exibindo X–Y de Z" matches the active filter's total
+- [x] The grid renders 4/3/2/1 columns at 1280px/1024px/640px/below without horizontal scrolling
+- [x] Requesting a page beyond the last redirects to the last valid page instead of an empty grid
+- [x] Clicking a card opens its detail modal over the grid without a route change; the card is reachable and activatable by keyboard
+- [x] Skeleton cards occupy the grid during filter and page changes, and the page height does not jump
+- [x] A broken sprite URL renders the silhouette placeholder without breaking the card layout
 
 ### F09. Pokémon Details
-- [ ] The page shows artwork, name, zero-padded number, types, abilities with hidden ones marked, the 6 base stats as bars, height in metres, and weight in kilograms
-- [ ] Height and weight are correctly converted from PokeAPI's decimetres and hectograms
-- [ ] The second view of the same Pokémon renders from cache with no outbound call
-- [ ] With PokeAPI unavailable, the page still shows name, number, types, and sprite from the local catalog plus the warning block and a working retry button
-- [ ] A slug that exists neither locally nor upstream renders the "Pokémon não encontrado." page, not a stack trace
-- [ ] "Voltar aos resultados" returns to the same page number and filters the user came from
-- [ ] A payload missing `stats` or `abilities` renders "Informação indisponível." for that section instead of erroring
+- [x] The page shows artwork, name, zero-padded number, types, abilities with hidden ones marked, the 6 base stats as bars, height in metres, and weight in kilograms
+- [x] Height and weight are correctly converted from PokeAPI's decimetres and hectograms
+- [x] The second view of the same Pokémon renders from cache with no outbound call
+- [x] With PokeAPI unavailable, the page still shows name, number, types, and sprite from the local catalog plus the warning block and a working retry button
+- [x] A slug that exists neither locally nor upstream renders "Pokémon não encontrado." inside the detail modal, not a stack trace
+- [x] Closing the detail modal returns to the exact results page, scroll position, and filters the user had, since opening it never navigates away from `/` or `/favoritos`
+- [x] A payload missing `stats` or `abilities` renders "Informação indisponível." for that section instead of erroring
 
 ### F10. Favorites
-- [ ] Clicking the star on a result card creates exactly 1 pivot row and fills the star immediately
-- [ ] Clicking the star twice for the same Pokémon leaves exactly 1 pivot row in the database
-- [ ] The favorite state is consistent between the result card and the detail page for the same Pokémon
-- [ ] `/favoritos` lists only the authenticated user's Pokémon, ordered by most recently favorited, 20 per page
-- [ ] Two different accounts favoriting the same Pokémon each see only their own collection
-- [ ] Removing a favorite asks for confirmation and removes the card without a full page reload
-- [ ] A tampered removal request targeting another user's favorite returns 403 and leaves that row intact
-- [ ] A failed write reverts the optimistic star state and shows the retry message
-- [ ] The navigation badge reflects the current count and displays "99+" above 99
-- [ ] Favorites persist across logout and login
+- [x] Clicking the star on a result card creates exactly 1 pivot row and fills the star immediately
+- [x] Clicking the star twice for the same Pokémon leaves exactly 1 pivot row in the database
+- [x] The favorite state is consistent between the result card and the detail modal for the same Pokémon
+- [x] `/favoritos` lists only the authenticated user's Pokémon, ordered by most recently favorited, 20 per page
+- [x] Two different accounts favoriting the same Pokémon each see only their own collection
+- [x] Removing a favorite (one click, no confirmation step) removes the card without a full page reload
+- [x] A tampered removal request targeting another user's favorite returns 403 and leaves that row intact
+- [x] A failed write reverts the optimistic star state and shows the retry message
+- [x] The navigation badge reflects the current count and displays "99+" above 99
+- [x] Favorites persist across logout and login
 
 ### F11. My Profile
-- [ ] The profile page shows the current name, the read-only e-mail, and the account creation date
-- [ ] Saving a new name updates the record and the navigation reflects it without a manual reload
-- [ ] A password change with the correct current password succeeds and stores a new bcrypt hash different from the previous one
-- [ ] A wrong current password is rejected at field level and nothing is written
-- [ ] A new password identical to the current one is rejected with an explicit message
-- [ ] A request carrying another user's identifier or an `email` field changes nothing for either account
-- [ ] After a successful password change, the current session stays active and other sessions for that user are invalidated
+- [x] The profile page shows the current name, the read-only e-mail, and the account creation date
+- [x] Saving a new name updates the record and the navigation reflects it without a manual reload
+- [x] A password change with the correct current password succeeds and stores a new bcrypt hash different from the previous one
+- [x] A wrong current password is rejected at field level and nothing is written
+- [x] A new password identical to the current one is rejected with an explicit message
+- [x] A request carrying another user's identifier or an `email` field changes nothing for either account
+- [x] After a successful password change, the current session stays active and other sessions for that user are invalidated
 
 ### F12. Real-time Chat
-- [ ] `/chat` lists every user except the current one, filterable by name and paginated at 30
+- [x] `/chat` lists every user except the current one, filterable by name and paginated at 30
 - [ ] A user connected in another browser appears with an online indicator within 5 seconds, and offline within 5 seconds of disconnect
 - [ ] A message sent from one browser appears in the recipient's open conversation in under 1 second with no reload
-- [ ] Every delivered message exists in the `messages` table before it is broadcast
-- [ ] Reopening a conversation after logout and login shows the full prior history
-- [ ] Scrolling to the top loads the previous 30 messages while keeping the scroll position anchored
-- [ ] A message arriving for a conversation that is not open increments that conversation's unread badge; opening it clears the badge
-- [ ] A body over 2000 characters is blocked in the interface and rejected server-side when the control is bypassed
-- [ ] A user who is not a participant is denied on `conversation.{id}` channel authorization and receives no events
-- [ ] Stopping the Reverb container shows the reconnecting banner, message sending still persists over HTTP, and the banner clears on reconnect
-- [ ] Two users writing to each other for the first time produce exactly 1 conversation row, not 2
-- [ ] A message body containing HTML renders as literal text
+- [x] Every delivered message exists in the `messages` table before it is broadcast
+- [x] Reopening a conversation after logout and login shows the full prior history
+- [x] Scrolling to the top loads the previous 30 messages while keeping the scroll position anchored
+- [x] A message arriving for a conversation that is not open increments that conversation's unread badge; opening it clears the badge
+- [x] A body over 2000 characters is blocked in the interface and rejected server-side when the control is bypassed
+- [x] A user who is not a participant is denied on `conversation.{id}` channel authorization and receives no events
+- [x] Stopping the Reverb container shows the reconnecting banner, message sending still persists over HTTP, and the banner clears on reconnect
+- [x] Two users writing to each other for the first time produce exactly 1 conversation row, not 2
+- [x] A message body containing HTML renders as literal text
 
 ### F13. Automated Test Suite
-- [ ] `php artisan test` runs green with at least 35 test cases across at least 10 files, in under 90 seconds
-- [ ] No test performs a real network call; every PokeAPI interaction is stubbed with `Http::fake`
-- [ ] A test asserts that a repeated identical search performs 0 additional outbound calls
-- [ ] A test asserts that favoriting the same Pokémon twice leaves exactly 1 pivot row
-- [ ] A test asserts that user A receives 403 when removing user B's favorite and that the row survives
-- [ ] A test asserts that user A cannot update user B's profile by injecting a user identifier
-- [ ] A test asserts that a non-participant is denied on `conversation.{id}` channel authorization
-- [ ] A test asserts that a 500 upstream response is retried 3 times and then reported unavailable, and that a 404 is not retried
+- [x] `php artisan test` runs green with at least 35 test cases across at least 10 files, in under 90 seconds
+- [x] No test performs a real network call; every PokeAPI interaction is stubbed with `Http::fake`
+- [x] A test asserts that a repeated identical search performs 0 additional outbound calls
+- [x] A test asserts that favoriting the same Pokémon twice leaves exactly 1 pivot row
+- [x] A test asserts that user A receives 403 when removing user B's favorite and that the row survives
+- [x] A test asserts that user A cannot update user B's profile by injecting a user identifier
+- [x] A test asserts that a non-participant is denied on `conversation.{id}` channel authorization
+- [x] A test asserts that a 500 upstream response is retried 3 times and then reported unavailable, and that a 404 is not retried
 - [ ] Tests are named as readable pt-BR sentences and grouped by feature file
-- [ ] Factories exist for User, Pokemon, Type, Favorite, Conversation, and Message, and no test depends on the production seeder
+- [x] Factories exist for User, Pokemon, Type, Favorite, Conversation, and Message, and no test depends on the production seeder
 
 ### Cross-Feature Integration
-- [ ] The index and type roster responses returned by the PokeAPI client (F05) populate the local catalog rows and type vocabulary written by the sync job (F06), producing ~1302 Pokémon each with 1 or 2 types
-- [ ] The catalog rows and type vocabulary written by the sync (F06) are the exact source the search (F07) queries: a Pokémon present in `pokemon` is findable by name fragment, and the type select is populated from the 18 stored types with their pt-BR labels
-- [ ] The filtered query produced by the search (F07) — matched rows, total match count, and active filter state — drives the result grid and paginator (F08): the card count, the "Exibindo X–Y de Z" line, and the number of pages all match the filtered total
-- [ ] The full detail payload returned by the PokeAPI client (F05) renders on the detail page (F09) with sprites, types, abilities, base stats, height, and weight populated from that payload
-- [ ] The selected slug and page-return context carried from the results grid (F08) open the correct detail page (F09), and "Voltar aos resultados" restores the same page number and filters
-- [ ] The catalog rows from the sync (F06) render the favorites page (F10) cards with the same name, number, types, and sprite shown in search results
-- [ ] The favorite toggle rendered into result cards (F08) writes and reads the same pivot row as the toggle on the detail page (F09): favoriting from a card shows the Pokémon as favorited when its detail page is opened, and vice versa
-- [ ] The registered user directory owned by authentication (F02) is the source of the chat user list (F12): a user created through registration (F03) appears in another user's chat list on the next load, with the name shown matching the one saved in the profile (F11)
+- [x] The index and type roster responses returned by the PokeAPI client (F05) populate the local catalog rows and type vocabulary written by the sync job (F06), producing ~1350 Pokémon each with 1 or 2 types
+- [x] The catalog rows and type vocabulary written by the sync (F06) are the exact source the search (F07) queries: a Pokémon present in `pokemon` is findable by name fragment, and the type select is populated from the 18 stored types with their pt-BR labels
+- [x] The filtered query produced by the search (F07) — matched rows, total match count, and active filter state — drives the result grid and paginator (F08): the card count, the "Exibindo X–Y de Z" line, and the number of pages all match the filtered total
+- [x] The full detail payload returned by the PokeAPI client (F05) renders in the detail modal (F09) with sprites, types, abilities, base stats, height, and weight populated from that payload
+- [x] Clicking a card in the results grid (F08) opens the correct Pokémon in the detail modal (F09) over that same grid, and closing it restores the same page number and filters with no navigation round-trip
+- [x] The catalog rows from the sync (F06) render the favorites page (F10) cards with the same name, number, types, and sprite shown in search results
+- [x] The favorite toggle rendered into result cards (F08) writes and reads the same pivot row as the toggle in the detail modal (F09): favoriting from a card shows the Pokémon as favorited when its detail modal is opened, and vice versa
+- [x] The registered user directory owned by authentication (F02) is the source of the chat user list (F12): a user created through registration (F03) appears in another user's chat list on the next load, with the name shown matching the one saved in the profile (F11)

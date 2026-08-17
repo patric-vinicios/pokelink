@@ -5,7 +5,7 @@ async function login(page) {
 
     if (page.url().includes('/login')) {
         await page.locator('input[type="email"]').fill('user@pokelink.test');
-        await page.locator('input[type="password"]').fill('password');
+        await page.locator('input[type="password"]').fill(process.env.POKELINK_BROWSER_PASSWORD ?? 'password');
         await page.locator('button[type="submit"]').click();
         await page.waitForURL('**/');
     }

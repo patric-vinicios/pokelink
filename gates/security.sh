@@ -9,4 +9,4 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-docker run --rm -v "$PWD":/app -w /app composer:2 audit
+docker run --rm -v "$PWD":/app -w /app composer:2 audit --locked --no-interaction
