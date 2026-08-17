@@ -49,7 +49,7 @@ class Conversation extends Model
      */
     public static function betweenUsers(User $a, User $b): self
     {
-        [$lowerId, $higherId] = static::orderedPair($a->id, $b->id);
+        [$lowerId, $higherId] = self::orderedPair($a->id, $b->id);
 
         return static::firstOrCreate([
             'user_one_id' => $lowerId,
@@ -64,7 +64,7 @@ class Conversation extends Model
      */
     public static function findBetween(int $userIdA, int $userIdB): ?self
     {
-        [$lowerId, $higherId] = static::orderedPair($userIdA, $userIdB);
+        [$lowerId, $higherId] = self::orderedPair($userIdA, $userIdB);
 
         return static::where('user_one_id', $lowerId)->where('user_two_id', $higherId)->first();
     }
