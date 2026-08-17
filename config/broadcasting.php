@@ -36,7 +36,12 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => env('REVERB_HOST'),
+                // Not REVERB_HOST: that one names the host the *browser*
+                // connects to (localhost, published from the reverb
+                // container). This is the server-side publish call, made
+                // from inside the app/queue containers, which must reach
+                // Reverb over the Compose network instead.
+                'host' => env('REVERB_BROADCAST_HOST', env('REVERB_HOST')),
                 'port' => env('REVERB_PORT', 443),
                 'scheme' => env('REVERB_SCHEME', 'https'),
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
