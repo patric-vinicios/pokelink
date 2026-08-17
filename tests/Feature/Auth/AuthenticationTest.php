@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Livewire\Volt\Volt;
 
-test('login screen can be rendered', function () {
+test('a tela de login renderiza o componente volt', function () {
     $response = $this->get('/login');
 
     $response
@@ -13,7 +13,7 @@ test('login screen can be rendered', function () {
         ->assertSeeVolt('pages.auth.login');
 });
 
-test('users can authenticate using the login screen', function () {
+test('um usuário se autentica com credenciais válidas pelo formulário de login', function () {
     $user = User::factory()->create();
 
     $component = Volt::test('pages.auth.login')
@@ -29,7 +29,7 @@ test('users can authenticate using the login screen', function () {
     $this->assertAuthenticated();
 });
 
-test('users can not authenticate with invalid password', function () {
+test('um usuário não se autentica com senha inválida', function () {
     $user = User::factory()->create();
 
     $component = Volt::test('pages.auth.login')
@@ -45,7 +45,7 @@ test('users can not authenticate with invalid password', function () {
     $this->assertGuest();
 });
 
-test('navigation menu can be rendered', function () {
+test('a barra de navegação renderiza para um usuário autenticado', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user);
@@ -57,7 +57,7 @@ test('navigation menu can be rendered', function () {
         ->assertSeeVolt('layout.navigation');
 });
 
-test('users can logout', function () {
+test('um usuário autenticado consegue fazer logout', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user);
