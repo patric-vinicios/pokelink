@@ -76,6 +76,31 @@ catching it after the fact like `gates/security.sh` does.
 
 The `app` image ships neither `pcov` nor `xdebug`, so `gates/test.sh` runs without `--coverage`.
 
+## CI
+
+`.github/workflows/` — one workflow per gate (`test`, `format`, `static-analysis`, `lint`,
+`architecture`, `duplication`, `unused-deps`, `security`) plus `boot`, all independent and running in
+parallel on every PR and on push to `main`. None of them use `docker compose` or `gates/*.sh` directly —
+those assume a long-lived local dev stack. Instead:
+
+- Every gate except `security` builds the `app` image via the shared `.github/actions/build-app-image`
+  composite action (target `final`, cached across all workflows with `cache-from`/`cache-to:
+  type=gha,scope=pokelink-app`), then runs `docker run --rm -e CONTAINER_ROLE=ci pokelink-app:ci
+  <command>`. `CONTAINER_ROLE=ci` makes `docker/php/entrypoint.sh` skip the MySQL wait and
+  migrate/seed/optimize steps (those only run for `CONTAINER_ROLE=app`), going straight to the check —
+  most gates are pure static analysis and never touch a database at all.
+- `test` is the one exception that needs a real dependency: PokeApiClient's response cache explicitly
+  targets the `redis` store (`config/pokeapi.php`), which bypasses `phpunit.xml`'s `CACHE_STORE=array`
+  default. The job runs a `redis:7-alpine` container named `redis` on a dedicated Docker network so it
+  resolves at the same hostname `.env.example` already points at (`REDIS_HOST=redis`) — no MySQL
+  container, since the DB itself is in-memory SQLite per `phpunit.xml`.
+- `security` needs neither image nor database — same disposable `composer:2` container as
+  `gates/security.sh`, reading only `composer.lock`.
+- `boot` is the odd one out: it's the only workflow that runs `gates/init.sh` and `gates/down.sh` as-is,
+  booting the real 6-service Compose stack end to end and curling `/up` — the only CI check that exercises
+  mysql, nginx, Horizon, and Reverb at all, validating the README's "one command" boot promise directly
+  rather than any one layer of it.
+
 ## Architecture
 
 **Boot sequence (docker-compose.yml):** `mysql`+`redis` healthy → `app` entrypoint (env/key, wait-for-db,
