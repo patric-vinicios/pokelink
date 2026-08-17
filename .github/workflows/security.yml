@@ -17,5 +17,8 @@ jobs:
 
       # No app image needed here — composer.lock is all `audit` reads. Same
       # disposable composer:2 container gates/security.sh uses locally,
-      # since the app image doesn't ship a composer binary.
-      - run: docker run --rm -v ${{ github.workspace }}:/app -w /app composer:2 audit
+      # since the app image doesn't ship a composer binary. $PWD (not the
+      # github.workspace expression) matches gates/security.sh exactly, and
+      # sidesteps whatever mangled the expression's substitution in-flight
+      # on a prior run (docker saw `-v :/app`, an empty host path).
+      - run: docker run --rm -v "$PWD":/app -w /app composer:2 audit
