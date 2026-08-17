@@ -22,7 +22,7 @@ class MessageSent implements ShouldBroadcastNow
      * sidebar to bump unread counts without subscribing to every
      * conversation).
      *
-     * @return array<int, \Illuminate\Broadcasting\PrivateChannel>
+     * @return array<int, PrivateChannel>
      */
     public function broadcastOn(): array
     {
