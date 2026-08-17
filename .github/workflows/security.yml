@@ -20,5 +20,20 @@ jobs:
       # since the app image doesn't ship a composer binary. $PWD (not the
       # github.workspace expression) matches gates/security.sh exactly, and
       # sidesteps whatever mangled the expression's substitution in-flight
-      # on a prior run (docker saw `-v :/app`, an empty host path).
-      - run: docker run --rm -v "$PWD":/app -w /app composer:2 audit
+      # on an earlier run (docker saw `-v :/app`, an empty host path).
+      #
+      # Retried: `audit` fetches the advisory database over the network, and
+      # a transient failure there is indistinguishable from a real advisory
+      # by exit code alone. A genuine advisory fails all 3 attempts
+      # identically; a network blip usually clears within one retry — this
+      # gate hit exactly that after the composer-install network flakiness
+      # that also (transiently) broke test/lint/duplication/boot the same day.
+      - run: |
+          for attempt in 1 2 3; do
+            if docker run --rm -v "$PWD":/app -w /app composer:2 audit; then
+              exit 0
+            fi
+            echo "audit attempt ${attempt} failed, retrying..." >&2
+            sleep 5
+          done
+          exit 1
