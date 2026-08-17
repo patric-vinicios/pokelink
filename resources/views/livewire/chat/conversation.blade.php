@@ -13,6 +13,8 @@ new class extends Component
 {
     public int $otherUserId;
 
+    public int $authUserId;
+
     public User $otherUser;
 
     // 0, not null: Livewire's dynamic #[On('echo-private:conversation.{conversationId},...')]
@@ -31,6 +33,7 @@ new class extends Component
     public function mount(int $otherUserId): void
     {
         $this->otherUserId = $otherUserId;
+        $this->authUserId = auth()->id();
         $this->otherUser = User::findOrFail($otherUserId);
 
         $conversation = Conversation::findBetween(auth()->id(), $otherUserId);
@@ -137,6 +140,32 @@ new class extends Component
         }
 
         $this->dispatch('message-appended');
+    }
+
+    /**
+     * Fallback for the conversation-doesn't-exist-yet case: with
+     * $conversationId still 0 when this component mounted, the listener
+     * above subscribed to conversation.0 — a channel nothing publishes to
+     * — and nothing ever re-renders this component (and so recomputes
+     * that binding) for a recipient who never calls send() themselves.
+     * The personal channel always exists and always delivers, so it
+     * catches this one first message and adopts the real conversation id;
+     * every message after this arrives through the now-correctly-bound
+     * conversation.{conversationId} listener instead, and the guard below
+     * stops this method from double-handling those.
+     *
+     * @param  array{id: int, conversation_id: int, sender_id: int, sender_name: string, body: string, created_at: string}  $event
+     */
+    #[On('echo-private:App.Models.User.{authUserId},.message.sent')]
+    public function firstMessageReceived(array $event): void
+    {
+        if ($this->conversationId !== 0 || $event['sender_id'] !== $this->otherUserId) {
+            return;
+        }
+
+        $this->conversationId = $event['conversation_id'];
+
+        $this->messageReceived($event);
     }
 
     private function markVisibleMessagesRead(Conversation $conversation): void
