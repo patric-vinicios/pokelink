@@ -16,6 +16,10 @@
 /public/build
 /public/hot
 /public/storage
+/playwright-report
+/test-results
+/blob-report
+/pikachu.png
 /storage/*.key
 /storage/pail
 /storage/phpstan
