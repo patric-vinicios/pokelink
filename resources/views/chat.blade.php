@@ -5,13 +5,15 @@
         </h2>
     </x-slot>
 
-    <x-card>
-        <x-empty-state message="Em construção.">
-            <x-slot name="action">
-                <a href="{{ route('dashboard') }}" wire:navigate class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                    Voltar ao início
-                </a>
-            </x-slot>
-        </x-empty-state>
+    <div
+        x-data
+        x-show="! $store.realtime.connected"
+        class="mb-4 rounded-md bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800"
+    >
+        Conexão em tempo real perdida. Reconectando...
+    </div>
+
+    <x-card padding="p-0">
+        <livewire:chat.index />
     </x-card>
 </x-app-layout>

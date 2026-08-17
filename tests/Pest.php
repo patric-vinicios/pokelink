@@ -1,6 +1,11 @@
 <?php
 
+use App\Jobs\SyncPokemonCatalog;
+use App\Jobs\SyncPokemonCatalogStats;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 /*
@@ -116,16 +121,16 @@ function pokeApiTypeBody(string $type, array $members = []): array
 function fakePokeApiCatalog(array $entries, array $typeMembers = []): void
 {
     $fakes = [
-        'https://pokeapi.co/api/v2/pokemon?*' => Illuminate\Support\Facades\Http::response(pokeApiIndexBody($entries)),
+        'https://pokeapi.co/api/v2/pokemon?*' => Http::response(pokeApiIndexBody($entries)),
     ];
 
     foreach (array_keys(config('pokemon.type_labels')) as $slug) {
-        $fakes["https://pokeapi.co/api/v2/type/{$slug}*"] = Illuminate\Support\Facades\Http::response(
+        $fakes["https://pokeapi.co/api/v2/type/{$slug}*"] = Http::response(
             pokeApiTypeBody($slug, $typeMembers[$slug] ?? [])
         );
     }
 
-    Illuminate\Support\Facades\Http::fake($fakes);
+    Http::fake($fakes);
 }
 
 /**
@@ -134,9 +139,9 @@ function fakePokeApiCatalog(array $entries, array $typeMembers = []): void
  * ShouldQueue job, still routes through the queue dispatcher and discards
  * both the real return value and thrown exceptions).
  */
-function runPokemonSync(): App\Jobs\SyncPokemonCatalogStats
+function runPokemonSync(): SyncPokemonCatalogStats
 {
-    return app()->call([new App\Jobs\SyncPokemonCatalog, 'handle']);
+    return app()->call([new SyncPokemonCatalog, 'handle']);
 }
 
 /**
@@ -147,7 +152,28 @@ function runPokemonSync(): App\Jobs\SyncPokemonCatalogStats
  */
 function resetPokeApiState(): void
 {
-    Illuminate\Support\Facades\Cache::store('redis')->flush();
-    Illuminate\Support\Facades\Cache::store('file')->forget('pokeapi:cache-degraded-logged');
-    Illuminate\Support\Facades\RateLimiter::clear(config('pokeapi.rate_limit.key'));
+    Cache::store('redis')->flush();
+    Cache::store('file')->forget('pokeapi:cache-degraded-logged');
+    RateLimiter::clear(config('pokeapi.rate_limit.key'));
+}
+
+/*
+|--------------------------------------------------------------------------
+| F12 — real channel authorization in tests
+|--------------------------------------------------------------------------
+|
+| BROADCAST_CONNECTION is forced to "null" in phpunit.xml, and the null
+| broadcaster's auth() is a no-op that never runs a channel's authorization
+| callback — every /broadcasting/auth request would otherwise succeed
+| regardless of the policy. Switching the default connection alone is not
+| enough either: routes/channels.php already ran once at boot against the
+| (cached) null broadcaster instance, so its Broadcast::channel()
+| registrations live there, not on a freshly resolved "reverb" instance.
+| Re-requiring the routes file re-registers them against the new default.
+|
+*/
+function useReverbBroadcaster(): void
+{
+    config(['broadcasting.default' => 'reverb']);
+    require base_path('routes/channels.php');
 }
