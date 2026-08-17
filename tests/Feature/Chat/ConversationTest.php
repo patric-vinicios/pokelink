@@ -120,6 +120,87 @@ test('a message body containing html is rendered as literal text', function () {
         ->assertSee('<script>alert(1)</script>');
 });
 
+test('a first message to a brand-new conversation still reaches the recipient\'s already-open thread', function () {
+    $me = User::factory()->create();
+    $other = User::factory()->create();
+
+    // $me opens the thread before anyone has ever messaged — mounts with
+    // conversationId = 0, the "no conversation yet" sentinel, and so
+    // subscribes (client-side) to conversation.0, a channel nothing
+    // publishes to. Nothing re-renders $me's component on its own, so
+    // without the personal-channel fallback this binding would never
+    // update once $other's message below creates the real conversation.
+    $component = Volt::actingAs($me)->test('chat.conversation', ['otherUserId' => $other->id]);
+    expect($component->get('conversationId'))->toBe(0);
+
+    Volt::actingAs($other)->test('chat.conversation', ['otherUserId' => $me->id])
+        ->set('body', 'oi, tudo bem?')
+        ->call('send');
+
+    $conversation = Conversation::first();
+    $message = Message::first();
+
+    // Simulates the App.Models.User.{me->id} event Echo delivers to $me's
+    // browser — the channel MessageSent::broadcastOn() always reaches
+    // regardless of what conversation.{conversationId} is bound to.
+    $component->call('firstMessageReceived', [
+        'id' => $message->id,
+        'conversation_id' => $conversation->id,
+        'sender_id' => $other->id,
+        'sender_name' => $other->name,
+        'body' => $message->body,
+        'created_at' => $message->created_at->toIso8601String(),
+    ]);
+
+    expect($component->get('conversationId'))->toBe($conversation->id);
+    $component->assertSee('oi, tudo bem?');
+});
+
+test('the personal-channel fallback ignores a message from someone other than the open thread\'s participant', function () {
+    $me = User::factory()->create();
+    $other = User::factory()->create();
+    $stranger = User::factory()->create();
+
+    $component = Volt::actingAs($me)->test('chat.conversation', ['otherUserId' => $other->id]);
+
+    $component->call('firstMessageReceived', [
+        'id' => 999,
+        'conversation_id' => 999,
+        'sender_id' => $stranger->id,
+        'sender_name' => $stranger->name,
+        'body' => 'not for this thread',
+        'created_at' => now()->toIso8601String(),
+    ]);
+
+    expect($component->get('conversationId'))->toBe(0);
+    $component->assertDontSee('not for this thread');
+});
+
+test('the personal-channel fallback does not double-append once the conversation id is already known', function () {
+    $me = User::factory()->create();
+    $other = User::factory()->create();
+    $conversation = Conversation::betweenUsers($me, $other);
+
+    $component = Volt::actingAs($me)->test('chat.conversation', ['otherUserId' => $other->id]);
+    expect($component->get('conversationId'))->toBe($conversation->id);
+
+    $message = Message::factory()->for($conversation)->create(['sender_id' => $other->id, 'body' => 'ja tinha conversa']);
+
+    // The real conversation.{conversationId} listener (messageReceived)
+    // already handles this message; the fallback must no-op instead of
+    // appending it a second time.
+    $component->call('firstMessageReceived', [
+        'id' => $message->id,
+        'conversation_id' => $conversation->id,
+        'sender_id' => $other->id,
+        'sender_name' => $other->name,
+        'body' => $message->body,
+        'created_at' => $message->created_at->toIso8601String(),
+    ]);
+
+    expect($component->get('messages'))->toBeEmpty();
+});
+
 test('a user cannot load the history of a conversation they don\'t participate in', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
